@@ -1,8 +1,12 @@
-# VERIFY — what to read, in what order
+# VERIFY — quick verification checklist
 
-> This is the single document for you to verify what was built in the 2026-05-23
-> session. Files are listed shortest-to-deepest. Each row tells you what to
-> look at, what to expect, and what would indicate a bug.
+> Read this if you want to verify the numbers reported in the writeup. Files
+> are listed shortest-to-deepest. Each row tells you what to look at, what
+> to expect, and what would indicate a bug.
+>
+> For a fuller walkthrough of the project from scratch, see
+> [`READING_GUIDE.md`](READING_GUIDE.md). For the published writeup, see
+> [the GitHub Pages site](https://lonehacker.github.io/mech-interp/).
 
 ## Quick read (5 minutes total)
 

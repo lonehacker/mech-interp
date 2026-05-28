@@ -4,8 +4,17 @@ __pycache__/
 .venv/
 venv/
 
-# Graphify cache (graph.json + graph.html stay committed)
-graphify-out/cache/
-
 # Local environment
 .env
+
+# Internal working files (kept locally, not for public repo)
+tasks.md
+CLAUDE.md
+logs/
+graphify-out/
+
+# Large binary activation caches — reproducible by running the experiments
+artifacts/cache/
+
+# OS detritus
+.DS_Store

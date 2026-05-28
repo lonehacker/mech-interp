@@ -1,12 +1,13 @@
 # Reading Guide — Understanding this project deeply
 
-You built this project over many evening sessions. This is the sequence to
-re-enter it as a human reader and actually understand what's there — not
-just verify that it ran, but look at the code, the graphs, and the
-controls until you can explain the result yourself.
+This is the sequence to read the project from scratch and actually
+understand what's there — not just verify that it ran, but look at the
+code, the graphs, and the controls until you can explain the result
+yourself. If you only want the headline finding, read the
+[published writeup](https://lonehacker.github.io/mech-interp/) instead.
 
-The total reading is ~4-6 hours, split into five "passes." Each pass has a
-purpose and a specific output (what you should be able to do after
+The total reading is ~4-6 hours, split into five "passes." Each pass has
+a purpose and a specific output (what you should be able to do after
 finishing it). You don't have to do it in one sitting.
 
 ---

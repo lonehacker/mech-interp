@@ -1,29 +1,0 @@
-2026-05-26 09:34:33,661 INFO phase1_tinymmlu: run_dir: /Users/anshulsinghle/safe_ai/mech-security/artifacts/runs/phase1_tinymmlu/20260526-093433 | extract=L13
-WARNING:root:float16 models may not work on CPU. Consider using a GPU or bfloat16.
-WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
-Loading weights:   0%|          | 0/288 [00:00<?, ?it/s]Loading weights:   0%|          | 1/288 [00:02<11:20,  2.37s/it]Loading weights:  77%|███████▋  | 223/288 [00:02<00:00, 117.81it/s]Loading weights:  97%|█████████▋| 280/288 [00:03<00:00, 102.64it/s]Loading weights: 100%|██████████| 288/288 [00:03<00:00, 85.89it/s] 
-WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
-2026-05-26 09:34:57,978 INFO phase1_tinymmlu: model: gemma-2-2b-it | device=mps
-INFO:phase1_tinymmlu:model: gemma-2-2b-it | device=mps
-2026-05-26 09:34:57,981 INFO phase1_tinymmlu: extracting d_hat at L13 from AdvBench ...
-INFO:phase1_tinymmlu:extracting d_hat at L13 from AdvBench ...
-2026-05-26 09:35:27,394 INFO phase1_tinymmlu: loading TinyMMLU ...
-INFO:phase1_tinymmlu:loading TinyMMLU ...
-2026-05-26 09:35:29,065 INFO phase1_tinymmlu: TinyMMLU rows: 100
-INFO:phase1_tinymmlu:TinyMMLU rows: 100
-2026-05-26 09:35:29,065 INFO phase1_tinymmlu: [1/2] baseline generations ...
-INFO:phase1_tinymmlu:[1/2] baseline generations ...
-2026-05-26 09:36:51,984 INFO phase1_tinymmlu: [2/2] ablated generations ...
-INFO:phase1_tinymmlu:[2/2] ablated generations ...
-2026-05-26 09:37:56,926 INFO phase1_tinymmlu: run record -> /Users/anshulsinghle/safe_ai/mech-security/artifacts/runs/phase1_tinymmlu/20260526-093433/result.json
-INFO:phase1_tinymmlu:run record -> /Users/anshulsinghle/safe_ai/mech-security/artifacts/runs/phase1_tinymmlu/20260526-093433/result.json
-2026-05-26 09:37:56,927 INFO phase1_tinymmlu: summary -> /Users/anshulsinghle/safe_ai/mech-security/results/phase1_tinymmlu_capability.md
-INFO:phase1_tinymmlu:summary -> /Users/anshulsinghle/safe_ai/mech-security/results/phase1_tinymmlu_capability.md
-Loaded pretrained model gemma-2-2b-it into HookedTransformer
-Moving model to device:  mps
-
-phase1_tinymmlu | n=100
-  baseline accuracy: 0.540 [0.44, 0.63] (54/100, no_answer=0)
-  ablated accuracy:  0.570 [0.47, 0.66] (57/100, no_answer=0)
-  Δ accuracy:        +0.030
-  specificity (|Δ| < 0.05): PASS
