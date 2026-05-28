@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Graphify cache (graph.json + graph.html stay committed)
+graphify-out/cache/
+
+# Local environment
+.env

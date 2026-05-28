@@ -1,0 +1,1396 @@
+{
+  "step": "phase1_tinymmlu_capability",
+  "model": "gemma-2-2b-it",
+  "extract_layer": 13,
+  "n_questions": 100,
+  "baseline": {
+    "n": 100,
+    "correct": 54,
+    "no_answer": 0,
+    "accuracy": 0.54,
+    "wilson_95_ci": [
+      0.44264685393523856,
+      0.6343935614666815
+    ],
+    "no_answer_rate": 0.0,
+    "per_subject": {
+      "high_school_statistics": {
+        "n": 2,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "nutrition": {
+        "n": 4,
+        "correct": 3,
+        "no_answer": 0
+      },
+      "clinical_knowledge": {
+        "n": 1,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "high_school_mathematics": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "moral_disputes": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "professional_medicine": {
+        "n": 5,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "prehistory": {
+        "n": 5,
+        "correct": 3,
+        "no_answer": 0
+      },
+      "business_ethics": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "philosophy": {
+        "n": 3,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "professional_psychology": {
+        "n": 3,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "professional_accounting": {
+        "n": 2,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_physics": {
+        "n": 4,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "abstract_algebra": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "anatomy": {
+        "n": 3,
+        "correct": 3,
+        "no_answer": 0
+      },
+      "high_school_world_history": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "college_medicine": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "professional_law": {
+        "n": 8,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_geography": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "moral_scenarios": {
+        "n": 7,
+        "correct": 3,
+        "no_answer": 0
+      },
+      "virology": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "elementary_mathematics": {
+        "n": 3,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_chemistry": {
+        "n": 3,
+        "correct": 3,
+        "no_answer": 0
+      },
+      "conceptual_physics": {
+        "n": 2,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "high_school_biology": {
+        "n": 1,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "miscellaneous": {
+        "n": 3,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "electrical_engineering": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "security_studies": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "world_religions": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "sociology": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "college_mathematics": {
+        "n": 1,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "college_biology": {
+        "n": 2,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "college_computer_science": {
+        "n": 2,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_government_and_politics": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "jurisprudence": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "international_law": {
+        "n": 3,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "marketing": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "public_relations": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_psychology": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "medical_genetics": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "human_sexuality": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "computer_security": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "human_aging": {
+        "n": 1,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "high_school_macroeconomics": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "formal_logic": {
+        "n": 2,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "us_foreign_policy": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_european_history": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      }
+    }
+  },
+  "ablated": {
+    "n": 100,
+    "correct": 57,
+    "no_answer": 0,
+    "accuracy": 0.57,
+    "wilson_95_ci": [
+      0.4721521169586435,
+      0.6626686099947162
+    ],
+    "no_answer_rate": 0.0,
+    "per_subject": {
+      "high_school_statistics": {
+        "n": 2,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "nutrition": {
+        "n": 4,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "clinical_knowledge": {
+        "n": 1,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "high_school_mathematics": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "moral_disputes": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "professional_medicine": {
+        "n": 5,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "prehistory": {
+        "n": 5,
+        "correct": 4,
+        "no_answer": 0
+      },
+      "business_ethics": {
+        "n": 2,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "philosophy": {
+        "n": 3,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "professional_psychology": {
+        "n": 3,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "professional_accounting": {
+        "n": 2,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_physics": {
+        "n": 4,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "abstract_algebra": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "anatomy": {
+        "n": 3,
+        "correct": 3,
+        "no_answer": 0
+      },
+      "high_school_world_history": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "college_medicine": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "professional_law": {
+        "n": 8,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "high_school_geography": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "moral_scenarios": {
+        "n": 7,
+        "correct": 3,
+        "no_answer": 0
+      },
+      "virology": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "elementary_mathematics": {
+        "n": 3,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_chemistry": {
+        "n": 3,
+        "correct": 3,
+        "no_answer": 0
+      },
+      "conceptual_physics": {
+        "n": 2,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "high_school_biology": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "miscellaneous": {
+        "n": 3,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "electrical_engineering": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "security_studies": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "world_religions": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "sociology": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "college_mathematics": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "college_biology": {
+        "n": 2,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "college_computer_science": {
+        "n": 2,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_government_and_politics": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "jurisprudence": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "international_law": {
+        "n": 3,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "marketing": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "public_relations": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_psychology": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "medical_genetics": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "human_sexuality": {
+        "n": 2,
+        "correct": 2,
+        "no_answer": 0
+      },
+      "computer_security": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "human_aging": {
+        "n": 1,
+        "correct": 0,
+        "no_answer": 0
+      },
+      "high_school_macroeconomics": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "formal_logic": {
+        "n": 2,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "us_foreign_policy": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      },
+      "high_school_european_history": {
+        "n": 1,
+        "correct": 1,
+        "no_answer": 0
+      }
+    }
+  },
+  "accuracy_delta": 0.029999999999999916,
+  "specificity_pass": true,
+  "per_question": [
+    {
+      "question": "The number of days it takes to build a new house has a variance of 386. A sample of 40 new homes shows an average buildi",
+      "subject": "high_school_statistics",
+      "truth": "D",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "According to trials on diabetes prevention, high-risk individuals can reduce their risk to develop diabetes by doing the",
+      "subject": "nutrition",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Which of the following is true regarding the complications of a large goitre?",
+      "subject": "clinical_knowledge",
+      "truth": "B",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Doses of substances used in animal toxicity studies are usually many times greater than those experienced by people beca",
+      "subject": "nutrition",
+      "truth": "B",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Rowena can paint a room in $14$ hours, while Ruby can paint it in $6$ hours. If Rowena paints for $x$ hours and Ruby pai",
+      "subject": "high_school_mathematics",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Which of the following statements would Macedo disagree with?",
+      "subject": "moral_disputes",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "A 17-year-old girl is brought to the physician by her mother because she has not had a menstrual period for 6 months. Th",
+      "subject": "professional_medicine",
+      "truth": "B",
+      "baseline_pred": "D",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "The Yang-shao culture gave way to the Lung-Shan sometime after:",
+      "subject": "prehistory",
+      "truth": "B",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Cultural homogenization.",
+      "subject": "business_ethics",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": false
+    },
+    {
+      "question": "Of the ways of escaping moral arguments that he discusses, Hare claims:",
+      "subject": "philosophy",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "An employee of large manufacturing firm finds the work dull, and pursues the job only for the money. The employee perfor",
+      "subject": "professional_psychology",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": false
+    },
+    {
+      "question": "In an e-commerce environment that requires that the information technology (IT) system be available on a continuous basi",
+      "subject": "professional_accounting",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "The Space Shuttle orbits 300 km above the Earth\u2019s surface; the Earth\u2019s radius is 6400 km. What is the acceleration due t",
+      "subject": "high_school_physics",
+      "truth": "B",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Statement 1 | The image of a group of 6 elements under a homomorphism may have 12 elements. Statement 2 | There is a hom",
+      "subject": "abstract_algebra",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "At which of the following locations does bile enter the digestive tract?",
+      "subject": "anatomy",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "This question refers to the following information.\nIs it not unity alone that can weld us into an effective force, capab",
+      "subject": "high_school_world_history",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Monte Alban is located in the ________ and was built by the _________.",
+      "subject": "prehistory",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Sauna use, sometimes referred to as \"sauna bathing,\" is characterized by short-term passive exposure to extreme heat. Th",
+      "subject": "college_medicine",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "A department store had suffered a succession of thefts of merchandise over a period of months. From reports by employees",
+      "subject": "professional_law",
+      "truth": "A",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Which language family is most widely spoken in North America and Europe and includes Baltic, Celtic, Germanic, and Greek",
+      "subject": "high_school_geography",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, accordin",
+      "subject": "moral_scenarios",
+      "truth": "D",
+      "baseline_pred": "C",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "How does rubella cause foetal abnormalities?",
+      "subject": "virology",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Find the opposite of the number \u22127.",
+      "subject": "elementary_mathematics",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Silver metal, often amalgamated with mercury, is used to reduce substances to a desired oxidation state. If the silver m",
+      "subject": "high_school_chemistry",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "A 52-year-old man is brought to the emergency department 30 minutes after he had an episode of chest pain radiating to h",
+      "subject": "professional_medicine",
+      "truth": "B",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, accordin",
+      "subject": "moral_scenarios",
+      "truth": "B",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "A mechanism is a sequence of elementary reactions that add up to the overall reaction stoichiometry. A substance that is",
+      "subject": "high_school_chemistry",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "A 22-year-old woman comes to the office because of urticaria. This is her first episode of urticaria and it has occurred",
+      "subject": "professional_medicine",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, accordin",
+      "subject": "moral_scenarios",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "If you were to travel at a speed close to the speed of light, you could notice that your own",
+      "subject": "conceptual_physics",
+      "truth": "D",
+      "baseline_pred": "A",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Form A of a standardized personality test was given in the fall and again in the spring co the same group of people. The",
+      "subject": "professional_psychology",
+      "truth": "C",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "All of the following statements are true EXCEPT",
+      "subject": "high_school_biology",
+      "truth": "B",
+      "baseline_pred": "D",
+      "ablated_pred": "B",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, accordin",
+      "subject": "moral_scenarios",
+      "truth": "A",
+      "baseline_pred": "B",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "The majority of Kurds are found in which country?",
+      "subject": "high_school_geography",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Including the bottom how many sides are on a square-based pyramid?",
+      "subject": "miscellaneous",
+      "truth": "C",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "One of the following is the primary function of an oscillator",
+      "subject": "electrical_engineering",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "In what ways, if any, can the environment be considered a security concern?",
+      "subject": "security_studies",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "________ are a business ethics management tool that have grown over the last few decades. Areas which these typically co",
+      "subject": "business_ethics",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "If an iron nucleus split in two, its fission fragments would have",
+      "subject": "conceptual_physics",
+      "truth": "B",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "In one metropolitan region, technical writers have an annual salary that is approximately normally distributed with a me",
+      "subject": "high_school_statistics",
+      "truth": "B",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "What is the communal meal offered at the place of worship called in Sikhism?",
+      "subject": "world_religions",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, accordin",
+      "subject": "moral_scenarios",
+      "truth": "A",
+      "baseline_pred": "C",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "A state law imposes penalties for \"any public statement containing false or misleading information about a service or pr",
+      "subject": "professional_law",
+      "truth": "D",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "When Berger & Luckmann said that reality is socially constructed, they meant:",
+      "subject": "sociology",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "If c > 0 and f(x) = e^x - cx for all real numbers x, then the minimum value of f is",
+      "subject": "college_mathematics",
+      "truth": "D",
+      "baseline_pred": "C",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "These factors increase risk of osteoporotic fracture:",
+      "subject": "nutrition",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": false
+    },
+    {
+      "question": "To prevent desiccation and injury, the embryos of terrestrial vertebrates are encased within a fluid secreted by the",
+      "subject": "college_biology",
+      "truth": "A",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Let A be a finite set with m elements, and let B be a finite set with n elements. The number of distinct functions mappi",
+      "subject": "college_computer_science",
+      "truth": "A",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "A disk of radius 0.1 m initially at rest undergoes an angular acceleration of 2.0 rad/s^2. If the disk only rotates, fin",
+      "subject": "high_school_physics",
+      "truth": "D",
+      "baseline_pred": "C",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "Identify the only construct that is not pertinent to developmental models on intelligence:",
+      "subject": "professional_psychology",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": false
+    },
+    {
+      "question": "Which of the following statements does NOT accurately describe voting behavior in the United States?",
+      "subject": "high_school_government_and_politics",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, accordin",
+      "subject": "moral_scenarios",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "A state imposes a graduated income tax upon net income calculated under federal law. Section 22 of the city's reform act",
+      "subject": "professional_law",
+      "truth": "C",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "A member of the president's cabinet is said to have \"gone native\" when that cabinet member",
+      "subject": "high_school_government_and_politics",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Order the following (risk, return) pairs from least to most favourable, assuming the perspective of a rational and risk-",
+      "subject": "professional_accounting",
+      "truth": "A",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "What is the main reason why many Critical Race Theorists are hostile to concepts such as 'justice', 'neutrality', and 't",
+      "subject": "jurisprudence",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "What is personal (ratione personae) immunity?",
+      "subject": "international_law",
+      "truth": "C",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Who is an 'injured State' in the law of international responsibility?",
+      "subject": "international_law",
+      "truth": "D",
+      "baseline_pred": "A",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "A national association brought suit in federal court against a city. The suit charged the city with violating several fe",
+      "subject": "professional_law",
+      "truth": "A",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "There are three main types of buying situations in an organization, referred to by Robinson, Faris, and Wind (1967) as _",
+      "subject": "marketing",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, accordin",
+      "subject": "moral_scenarios",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": false
+    },
+    {
+      "question": "A ________ campaign occurs when people from two or more opposing sides of an argument have emotional convictions about a",
+      "subject": "public_relations",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "One afternoon a motorist was driving her car when she struck a pedestrian who entered the intersection. The pedestrian w",
+      "subject": "professional_law",
+      "truth": "D",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Which of the following samples would be considered most representative of male college students?",
+      "subject": "high_school_psychology",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Which statement below is the least likely to follow logically from Dworkin's notion of law as integrity?",
+      "subject": "jurisprudence",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "X-chromosome inactivation",
+      "subject": "medical_genetics",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "In the fetus, the ductus arteriosus passes blood from the",
+      "subject": "anatomy",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "The follicular phase is to the __________ as the luteal phase is to the secretory phase.",
+      "subject": "human_sexuality",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Buffer-overflow may remain as a bug in apps if __________ are not done fully.",
+      "subject": "computer_security",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Let T be a depth-first search tree of a connected undirected graph G. For each vertex v of T, let pre(v) be the number o",
+      "subject": "college_computer_science",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "This question refers to the following information.\nEvery two months His Majesty sends from Lima 60,000 pesos to pay for ",
+      "subject": "high_school_world_history",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "A soccer team has $90.00 to buy soccer balls. If one soccer ball costs $15.60, what is the greatest number of soccer bal",
+      "subject": "elementary_mathematics",
+      "truth": "B",
+      "baseline_pred": "C",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Current estimates of how many people exercise on a regular basis suggest that _____ do",
+      "subject": "human_aging",
+      "truth": "A",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "An object carries a charge of \u20131 C. How many excess electrons does it contain?",
+      "subject": "high_school_physics",
+      "truth": "A",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "According to Socrates, it is important that we discover what makes a particular action (e.g., a merciful or just act) th",
+      "subject": "philosophy",
+      "truth": "C",
+      "baseline_pred": "B",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "A woman leased a condo from the owner for a period of one year. After six months, the owner gave the woman a written opt",
+      "subject": "professional_law",
+      "truth": "D",
+      "baseline_pred": "C",
+      "ablated_pred": "A",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "What does the presence of discouraged workers do to the measurement of the unemployment rate?",
+      "subject": "high_school_macroeconomics",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "In the film 'The Talented Mr Ripley' who plays Mr Ripley?",
+      "subject": "miscellaneous",
+      "truth": "B",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Which of the following allows gas exchange in the lungs?",
+      "subject": "anatomy",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Anscombe criticizes as absurd Kant\u2019s idea of:",
+      "subject": "philosophy",
+      "truth": "D",
+      "baseline_pred": "B",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Select the best translation into predicate logic. Some firefighters rescue victims from danger. (Dx: x is danger; Fx: x ",
+      "subject": "formal_logic",
+      "truth": "B",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "During a clinical study examining the effects of exercise, men between the ages of 20 and 30 years are evaluated during ",
+      "subject": "professional_medicine",
+      "truth": "D",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Which of the following was described as \u201cthe slow agency of existing causes\u201d?",
+      "subject": "prehistory",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "A car gets 24 miles per gallon of gasoline (mi/gal). How many gallons of gasoline would the car need to travel 144 miles",
+      "subject": "elementary_mathematics",
+      "truth": "B",
+      "baseline_pred": "A",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "A school psychologist is providing feedback to a student's parents regarding the student's performance on a measure of a",
+      "subject": "high_school_psychology",
+      "truth": "A",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Global and regional international trade agreements work by using which of the following mechanisms?",
+      "subject": "us_foreign_policy",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "D",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "When did Mohenjo-daro develop into a complex urban center?",
+      "subject": "prehistory",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "The Traditional Religion Advocacy Party (TRAP) has successfully lobbied the State of Texarkana for a statute named \"Equa",
+      "subject": "professional_law",
+      "truth": "D",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "Adaptive thermogenesis refers to:",
+      "subject": "nutrition",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "In all of her relationships Helen is typically uncomfortable feeling close to another person or having that person feel ",
+      "subject": "human_sexuality",
+      "truth": "B",
+      "baseline_pred": "B",
+      "ablated_pred": "B",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "In primates, the location of which of the following determines if it is a quadruped or biped?",
+      "subject": "prehistory",
+      "truth": "C",
+      "baseline_pred": "A",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "What is the meaning of collective security?",
+      "subject": "international_law",
+      "truth": "C",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "In the comic strip 'Peanuts' what is Schroeder known for doing?",
+      "subject": "miscellaneous",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "A writer's latest novel created a debate among critics regarding whether the sexual references and the graphic practices",
+      "subject": "professional_law",
+      "truth": "D",
+      "baseline_pred": "D",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": false
+    },
+    {
+      "question": "This question refers to the following information.\n\"But you, my dear Pangloss,\" said Candide, \"how can it be that I beho",
+      "subject": "high_school_european_history",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "Which of the following is the symplastic pathway for the movement of sucrose from the site of photosynthesis in mesophyl",
+      "subject": "college_biology",
+      "truth": "D",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": false,
+      "ablated_correct": false
+    },
+    {
+      "question": "A 45-year-old man comes to the physician because of right shoulder pain that began after he chopped wood 2 days ago. Exa",
+      "subject": "professional_medicine",
+      "truth": "A",
+      "baseline_pred": "C",
+      "ablated_pred": "A",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "Use the following key to translate the given formula of PL to natural, English sentences.\nA: Marina reads a Percy Jackso",
+      "subject": "formal_logic",
+      "truth": "D",
+      "baseline_pred": "C",
+      "ablated_pred": "D",
+      "baseline_correct": false,
+      "ablated_correct": true
+    },
+    {
+      "question": "The weight percent of sodium hydroxide dissolved in water is 50%. What is the mole fraction of sodium hydroxide?",
+      "subject": "high_school_chemistry",
+      "truth": "C",
+      "baseline_pred": "C",
+      "ablated_pred": "C",
+      "baseline_correct": true,
+      "ablated_correct": true
+    },
+    {
+      "question": "In a certain region, the electric field varies with the radius away from origin by the equation Er = \u20136r^2 + 4r + 3, whe",
+      "subject": "high_school_physics",
+      "truth": "D",
+      "baseline_pred": "A",
+      "ablated_pred": "A",
+      "baseline_correct": false,
+      "ablated_correct": false
+    }
+  ]
+}

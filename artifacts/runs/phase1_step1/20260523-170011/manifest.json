@@ -1,0 +1,13 @@
+{
+  "step": "phase1_step1",
+  "seed": 0,
+  "n_per_split": 150,
+  "harmful_source": "https://github.com/llm-attacks/llm-attacks/blob/main/data/advbench/harmful_behaviors.csv",
+  "harmless_source": "huggingface://tatsu-lab/alpaca",
+  "harmful_pool_size": 520,
+  "harmless_pool_filter": "no input field, len \u2265 10",
+  "stratification": "stem (first word, lowercased) \u00d7 char-length bucket (width 25)",
+  "n_harmful": 150,
+  "n_harmless": 150,
+  "output": "/Users/anshulsinghle/safe_ai/mech-security/data/contrastive.jsonl"
+}

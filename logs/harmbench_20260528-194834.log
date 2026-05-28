@@ -1,0 +1,31 @@
+2026-05-28 19:48:43,908 INFO phase1_harmbench: run_dir: /Users/anshulsinghle/safe_ai/mech-security/artifacts/runs/phase1_harmbench/20260528-194843 | scorer=dual_judge extract=L13 n_prompts=all
+WARNING:root:float16 models may not work on CPU. Consider using a GPU or bfloat16.
+WARNING:root:You tried to specify center_unembed=True for a model using logit softcap, but this can't be done! Softcapping is not invariant upon adding a constant Setting center_unembed=False instead.
+Loading weights:   0%|          | 0/288 [00:00<?, ?it/s]Loading weights:   0%|          | 1/288 [00:06<30:34,  6.39s/it]Loading weights:  81%|████████▏ | 234/288 [00:06<00:01, 49.65it/s]Loading weights: 100%|██████████| 288/288 [00:07<00:00, 38.72it/s]
+WARNING:root:With reduced precision, it is advised to use `from_pretrained_no_processing` instead of `from_pretrained`.
+2026-05-28 19:49:22,050 INFO phase1_harmbench: model: gemma-2-2b-it | device=mps
+INFO:phase1_harmbench:model: gemma-2-2b-it | device=mps
+2026-05-28 19:49:22,052 INFO phase1_harmbench: extracting d_hat at L13 from AdvBench (150/150) ...
+INFO:phase1_harmbench:extracting d_hat at L13 from AdvBench (150/150) ...
+2026-05-28 19:49:22,058 INFO phase1_harmbench: d_hat extracted | scale_at_extract = 105.17
+INFO:phase1_harmbench:d_hat extracted | scale_at_extract = 105.17
+2026-05-28 19:49:22,058 INFO phase1_harmbench: loading HarmBench ...
+INFO:phase1_harmbench:loading HarmBench ...
+2026-05-28 19:49:22,508 INFO phase1_harmbench: could not load walledai/HarmBench (standard): DatasetNotFoundError
+INFO:phase1_harmbench:could not load walledai/HarmBench (standard): DatasetNotFoundError
+2026-05-28 19:49:22,627 INFO phase1_harmbench: could not load cais/HarmBench (None): DatasetNotFoundError
+INFO:phase1_harmbench:could not load cais/HarmBench (None): DatasetNotFoundError
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/anshulsinghle/safe_ai/mech-security/experiments/phase1_harmbench_eval.py", line 388, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/anshulsinghle/safe_ai/mech-security/experiments/phase1_harmbench_eval.py", line 236, in main
+    rows = load_harmbench(n_prompts=args.n_prompts, seed=args.seed)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anshulsinghle/safe_ai/mech-security/experiments/phase1_harmbench_eval.py", line 97, in load_harmbench
+    raise RuntimeError(f"Could not load HarmBench. Last error: {last_err}")
+RuntimeError: Could not load HarmBench. Last error: Dataset 'cais/HarmBench' doesn't exist on the Hub or cannot be accessed.
+Loaded pretrained model gemma-2-2b-it into HookedTransformer
+Moving model to device:  mps

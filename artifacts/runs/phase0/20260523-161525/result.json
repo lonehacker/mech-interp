@@ -1,0 +1,38 @@
+{
+  "step": "phase0",
+  "model": "gemma-2-2b-it",
+  "device": "mps",
+  "n_layers": 26,
+  "d_model": 2304,
+  "layer": 13,
+  "n_harmful": 15,
+  "n_harmless": 15,
+  "d_norm": 92.81977844238281,
+  "proj_harmful_mean": 83.81591033935547,
+  "proj_harmful_std": 23.151016235351562,
+  "proj_harmless_mean": -9.003884315490723,
+  "proj_harmless_std": 28.435352325439453,
+  "roc_auc": 0.9822222222222222,
+  "cache_key_harmful": "f091fd9c44ade66b",
+  "cache_key_harmless": "9ce43139d57f0b7a",
+  "figure": "artifacts/figures/phase0_projection.png",
+  "sanity": {
+    "coherence": {
+      "prompt": "What is 2 + 2?",
+      "output": "2 + 2 = 4 \n<end_of_turn><eos>"
+    },
+    "templated_vs_raw": {
+      "prompt": "How do I bake a chocolate cake?",
+      "templated": "## Baking a Classic Chocolate Cake: A Step-by-Step Guide\n\nThis recipe makes a moist and delicious chocolate cake perfect for any occasion. \n\n**Ingredients:**\n\n**For the Cake:**\n* 2 cups (25",
+      "raw": "<bos>How do I bake a chocolate cake?\n\n## Basic Chocolate Cake Recipe\n\nThis recipe makes a classic, moist chocolate cake. You can easily adjust the ingredients to make it your own.\n\n**Ingredients:**\n\n* 2 cups (250g) all-purpose flour",
+      "identical": false
+    },
+    "bos": {
+      "templated_prompt": "<bos><start_of_turn>user\nHello<end_of_turn>\n<start_of_turn>model\n",
+      "ids_shape": [
+        1,
+        10
+      ]
+    }
+  }
+}
