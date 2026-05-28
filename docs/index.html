@@ -252,8 +252,11 @@
     figure { margin: 1.5rem 0; }
   }
 
-  /* Question framing */
-  p > em:only-child {
+  /* Question framing — opt-in via class, NOT a global em selector.
+     Previously this rule used `p > em:only-child` which fires for every
+     inline italic since CSS :only-child ignores text-node siblings,
+     breaking every inline emphasis in prose. */
+  p.q > em {
     font-family: var(--sans);
     font-size: 0.95rem;
     color: var(--fg-muted);
@@ -389,7 +392,7 @@ This should be read alongside, not against, Wollschläger et al.’s multi-dimen
 Model: <code>gemma-2-2b-it</code> (2B parameters, instruction-tuned), run via TransformerLens on Apple Silicon. The contrastive set contains 150 AdvBench harmful prompts and 150 length-matched Alpaca harmless prompts, frozen with a data hash. Steering experiments use a fixed split of 138 training harmful prompts and 12 held-out harmful prompts.
 </p>
 <h3>4.2 Layer sweep</h3>
-<p><em>Question: at which layer does the diff-of-means direction best separate harmful from harmless prompts?</em></p>
+<p class="q"><em>Question: at which layer does the diff-of-means direction best separate harmful from harmless prompts?</em></p>
 <p>
 I compute the diff-of-means direction at each of the 26 layers and measure harmful-versus-harmless classification using leave-one-out cross-validation AUC. Shuffled-label and random-direction controls are included to verify that the signal is not an artifact.
 </p>
@@ -445,7 +448,7 @@ The sweep shows that scale matters. The mean projection of harmful activations o
 </p>
 </div>
 <h3>4.5 Single-layer ablation localization</h3>
-<p><em>Question: is all-layer ablation necessary, or is the causal effect localized?</em></p>
+<p class="q"><em>Question: is all-layer ablation necessary, or is the causal effect localized?</em></p>
 <p>
 The standard recipe ablates <code>d̂</code> at every layer. I also ablate a single layer per run to localize where the intervention matters most. This preliminary localization uses five layers and eight harmful prompts per cell.
 </p>
@@ -459,7 +462,7 @@ L13 alone is sufficient in this test: single-layer ablation at L13 drops refusal
 </figcaption>
 </figure>
 <h3>4.6 Probing (independent evidence)</h3>
-<p><em>Question: at which layers can a simple classifier detect the harmful-versus-harmless distinction?</em></p>
+<p class="q"><em>Question: at which layers can a simple classifier detect the harmful-versus-harmless distinction?</em></p>
 <p>
 A per-layer logistic probe achieves near-perfect accuracy across almost the entire network (L1–L25), much wider than the causal band observed under intervention. This illustrates the standard caveat: probing shows what is linearly readable, not necessarily what the model uses.
 </p>
@@ -470,7 +473,7 @@ A per-layer logistic probe achieves near-perfect accuracy across almost the enti
 </figcaption>
 </figure>
 <h3>4.7 Depth profile</h3>
-<p><em>Question: how does the refusal signal change through the network?</em></p>
+<p class="q"><em>Question: how does the refusal signal change through the network?</em></p>
 <p>
 Projecting <code>d̂</code> onto activations across layers shows a large amplification from early layers, where the feature is readable but small, to L13, where the projection is large enough to drive behavior under intervention.
 </p>
@@ -499,7 +502,7 @@ The observed change is Δ = +0.03, well within the Wilson confidence intervals. 
 </p>
 <!-- ========= 4. GENERALITY ========= -->
 <h2 id="generality">5. Cross-harm generality</h2>
-<p><em>Question: is the same direction recovered across harm categories?</em></p>
+<p class="q"><em>Question: is the same direction recovered across harm categories?</em></p>
 <p>
 I extract <code>d̂</code> separately from disjoint harm-category pools: cyber-attack (n=33), physical-weapons (n=17), and financial-fraud (n=19). Pairwise cosines are 0.88–0.92. Against a matched-size null of 0.97 ± 0.014, this indicates a dominant shared component with a small but detectable category-specific residual.
 </p>
