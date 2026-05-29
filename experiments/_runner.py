@@ -85,6 +85,12 @@ def _json_default(o: Any) -> Any:
         return o.detach().to("cpu").float().tolist()
     if isinstance(o, Path):
         return str(o)
+    # numpy scalar types (bool_, int64, float32, ...) → native Python
+    if hasattr(o, "item") and callable(o.item):
+        try:
+            return o.item()
+        except Exception:
+            pass
     raise TypeError(f"not JSON-serializable: {type(o)}")
 
 
