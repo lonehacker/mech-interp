@@ -1,0 +1,140 @@
+{
+  "step": "phase1_cross_extraction",
+  "model": "gemma-2-2b-it",
+  "extract_layer": 13,
+  "n_advbench": 150,
+  "n_harmbench": 200,
+  "n_alpaca_harmless": 150,
+  "cos_advbench_vs_harmbench": 0.9508011937141418,
+  "d_hat_advbench_stats": {
+    "advbench_proj_mean": 110.7560043334961,
+    "advbench_proj_std": 27.90052604675293,
+    "harmbench_proj_mean": 90.54325866699219,
+    "harmbench_proj_std": 31.362403869628906,
+    "alpaca_proj_mean": 5.583436489105225,
+    "alpaca_proj_std": 12.566991806030273,
+    "auc_advbench_vs_alpaca": 0.9984000000000001,
+    "auc_harmbench_vs_alpaca": 0.9971333333333333,
+    "scale_advbench": 105.17256927490234,
+    "scale_harmbench": 84.95982360839844
+  },
+  "d_hat_harmbench_stats": {
+    "advbench_proj_mean": 108.343994140625,
+    "advbench_proj_std": 26.09449577331543,
+    "harmbench_proj_mean": 97.70185852050781,
+    "harmbench_proj_std": 27.080429077148438,
+    "alpaca_proj_mean": 8.345813751220703,
+    "alpaca_proj_std": 10.947615623474121,
+    "auc_advbench_vs_alpaca": 0.9993777777777778,
+    "auc_harmbench_vs_alpaca": 0.9997,
+    "scale_advbench": 99.99818420410156,
+    "scale_harmbench": 89.35604858398438
+  },
+  "per_layer_auc_harmbench": [
+    {
+      "layer": 0,
+      "auc": 0.9321
+    },
+    {
+      "layer": 1,
+      "auc": 0.9822333333333333
+    },
+    {
+      "layer": 2,
+      "auc": 0.9532333333333334
+    },
+    {
+      "layer": 3,
+      "auc": 0.9293666666666667
+    },
+    {
+      "layer": 4,
+      "auc": 0.9131666666666667
+    },
+    {
+      "layer": 5,
+      "auc": 0.9765666666666667
+    },
+    {
+      "layer": 6,
+      "auc": 0.9459666666666667
+    },
+    {
+      "layer": 7,
+      "auc": 0.9820666666666666
+    },
+    {
+      "layer": 8,
+      "auc": 0.9863999999999999
+    },
+    {
+      "layer": 9,
+      "auc": 0.9971333333333334
+    },
+    {
+      "layer": 10,
+      "auc": 0.9934333333333334
+    },
+    {
+      "layer": 11,
+      "auc": 0.9997333333333333
+    },
+    {
+      "layer": 12,
+      "auc": 0.9995666666666667
+    },
+    {
+      "layer": 13,
+      "auc": 0.9997
+    },
+    {
+      "layer": 14,
+      "auc": 0.9993000000000001
+    },
+    {
+      "layer": 15,
+      "auc": 0.9980333333333333
+    },
+    {
+      "layer": 16,
+      "auc": 0.9984333333333333
+    },
+    {
+      "layer": 17,
+      "auc": 0.9981666666666666
+    },
+    {
+      "layer": 18,
+      "auc": 0.9966999999999999
+    },
+    {
+      "layer": 19,
+      "auc": 0.9970999999999999
+    },
+    {
+      "layer": 20,
+      "auc": 0.9965333333333333
+    },
+    {
+      "layer": 21,
+      "auc": 0.9973666666666666
+    },
+    {
+      "layer": 22,
+      "auc": 0.9975999999999999
+    },
+    {
+      "layer": 23,
+      "auc": 0.9993000000000001
+    },
+    {
+      "layer": 24,
+      "auc": 0.9995333333333334
+    },
+    {
+      "layer": 25,
+      "auc": 0.9994666666666667
+    }
+  ],
+  "method_note": "Harmless side held constant (Alpaca, the same set used in our AdvBench d_hat extraction). Only the harmful source varies (AdvBench vs HarmBench). Length-matching between HarmBench harmful and Alpaca harmless is not audited for this run."
+}

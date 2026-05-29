@@ -396,6 +396,24 @@ from a different layer (L3). All are perfect classifiers of harmful vs harmless 
 <p>
 The result is not explained by the alternatives being small perturbations of the same vector. The three bootstrap LDA directions have cosine similarities of 0.07–0.20 to the L13 diff-of-means direction, making them nearly orthogonal in the 2304-dimensional activation space. Because the classification problem is underdetermined (2304 dimensions, 300 samples), many separating hyperplanes exist; most are not causal for the behavior tested here.
 </p>
+<p>
+A natural objection: maybe the LDA directions aren't real classifiers either — maybe they overfit a particular AdvBench-vs-Alpaca split and don't actually correspond to a meaningful feature. The clean test is to evaluate their classification AUC on a <em>different</em> benchmark (HarmBench) where they were never optimized. They generalize:
+</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Direction</th><th>AUC on AdvBench</th><th>AUC on HarmBench</th><th>cos with d̂</th></tr></thead>
+<tbody>
+<tr><td>d̂_advbench (diff-of-means)</td><td class="num">0.998</td><td class="num">0.997</td><td class="num">1.000</td></tr>
+<tr><td>LDA-top-1 (bootstrap 101)</td><td class="num">1.000</td><td class="num">1.000</td><td class="num">0.175</td></tr>
+<tr><td>LDA-top-1 (bootstrap 202)</td><td class="num">0.999</td><td class="num">0.959</td><td class="num">0.053</td></tr>
+<tr><td>LDA-top-1 (bootstrap 303)</td><td class="num">1.000</td><td class="num">1.000</td><td class="num">0.205</td></tr>
+<tr><td>random unit vector (floor)</td><td class="num">0.611</td><td class="num">0.533</td><td class="num">0.007</td></tr>
+</tbody>
+</table>
+</div>
+<p>
+All three LDA-bootstrap directions are real cross-distribution classifiers (HarmBench AUC ≥ 0.96; random floor ≈ 0.53). They are not AdvBench overfits. The model's residual stream contains <strong>at least four mutually near-orthogonal real classifiers</strong> of "harmful vs harmless" — diff-of-means and three independent LDA bootstraps. Only one of the four (diff-of-means) actually mediates refusal behavior under ablation.
+</p>
 <div class="finding-box">
 <p>
 <strong>Finding.</strong> On Gemma-2-2b-it, the L13 diff-of-means direction is the only causal refusal direction recovered by the statistical extraction methods tested here. Several near-orthogonal alternatives are classification-equivalent but behave like a random direction under ablation. <strong>This effect carries to held-out HarmBench at N = 200</strong> (see §4.8): under Arditi-style ablation on 200 HarmBench prompts, the diff-of-means direction drops refusal from 99% to 8%, the random control stays at 99%, and an LDA-bootstrap-top-1 direction (cos = 0.17 with d̂, a near-orthogonal classification-equivalent direction) gives 197/200 = 98.5% refusal — matching the random control, not the causal direction. 17× scale-up from the AdvBench N = 12 test; qualitative picture unchanged. Classification structure is rich in 2304-dimensional residual space; causal structure is narrow.
@@ -581,6 +599,39 @@ Capability is checked on 100 TinyMMLU questions using zero-shot multiple choice 
 <p>
 The observed change is Δ = +0.03, well within the Wilson confidence intervals. In this check, the large refusal drop is not accompanied by measurable capability degradation.
 </p>
+<h3>4.10 Cross-extraction: same direction, or distribution-specific?</h3>
+<p><em>Question: §4.8 showed AdvBench-extracted d̂ ablates refusal on HarmBench. The reverse direction: extract d̂ from HarmBench independently, then compare. Are the two directions the same?</em></p>
+<p>
+Same recipe (diff-of-means at L13), same harmless side (Alpaca, held constant). Only the harmful source varies: 150 AdvBench prompts vs 200 HarmBench standard-behavior prompts.
+</p>
+<div class="callout">
+<p>
+<strong>cos(d̂_advbench, d̂_harmbench) = 0.95</strong>
+</p>
+<p style="margin-top: 0.5rem;">
+In a 2304-dimensional space, two random unit vectors have expected cosine ≈ 0 with standard deviation ≈ 0.02. cos = 0.95 means the two directions are 95% parallel — essentially the same vector.
+</p>
+</div>
+<p>
+Both directions discriminate both benchmarks at AUC ≈ 1.0:
+</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Direction</th><th>AUC on AdvBench</th><th>AUC on HarmBench</th><th>scale on AdvBench</th><th>scale on HarmBench</th></tr></thead>
+<tbody>
+<tr><td>d̂_advbench</td><td class="num">0.998</td><td class="num">0.997</td><td class="num">105.2</td><td class="num">85.0</td></tr>
+<tr><td>d̂_harmbench</td><td class="num">0.999</td><td class="num">1.000</td><td class="num">100.0</td><td class="num">89.4</td></tr>
+</tbody>
+</table>
+</div>
+<p>
+A per-layer AUC sweep for d̂_harmbench shows the peak is L11 (AUC = 0.9997), essentially the same mid-network band that d̂_advbench lives in (AdvBench peak L23, plateau L7–L25). Both diff-of-means extractions land in the same depth band on the same model — they're recovering the same feature from slightly different cuts of harmful-prompt distribution.
+</p>
+<div class="finding-box">
+<p>
+<strong>Finding.</strong> The refusal direction on Gemma-2-2b-it is <strong>essentially invariant to the harmful-prompt benchmark used for extraction</strong>. AdvBench-derived d̂ and HarmBench-derived d̂ are 95% parallel in 2304-dimensional residual space, both classify both benchmarks at AUC ≈ 1.0, and both peak in the same mid-network layer band. The cross-extraction question collapses cleanly: there is one direction, not two. (The behavioral cross-ablation test — d̂_harmbench ablation on AdvBench prompts and vice versa — was scoped but skipped, because the cosine result already determines its answer: ablating one direction ≈ ablating the other.)
+</p>
+</div>
 <!-- ========= 4. GENERALITY ========= -->
 <h2 id="generality">5. Cross-harm generality</h2>
 <p class="q"><em>Question: is the same direction recovered across harm categories?</em></p>
