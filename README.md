@@ -9,12 +9,14 @@ extraction decoupling.
 Directions — A Replication on Gemma-2-2b-it](https://lonehacker.github.io/mech-interp/)
 
 **The headline finding, one sentence:** on Gemma-2-2b-it, ablating the L13
-diff-of-means direction drops refusal from 100% (12/12) to 17% (2/12)
-under a calibrated LLM judge; five classification-equivalent alternatives
-extracted by statistical methods (3 bootstrap LDA directions, a 5-D LDA
-subspace, diff-of-means from a different layer) are perfect classifiers
-but causally inert under the same ablation. TinyMMLU accuracy is preserved
-(Δ = +0.03, within noise).
+diff-of-means direction drops refusal **from 99% to 8% on HarmBench (n=200,
+dual-judge cross-check) — a 91-percentage-point drop** with perfect
+specificity (random direction = 99% refusal). Five
+classification-equivalent alternatives extracted by other statistical
+methods (3 bootstrap LDA directions, a 5-D LDA subspace, diff-of-means
+from a different layer) are perfect classifiers but causally inert under
+the same ablation. TinyMMLU accuracy is preserved (Δ = +0.03, within
+noise) — the ablation is refusal-specific, not lobotomization.
 
 **Scope:** replication + methodology contribution. Not a novel finding.
 Every conceptual claim is in the published literature (Arditi 2024,

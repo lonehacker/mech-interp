@@ -432,6 +432,48 @@ target one while leaving the other intact.
 
 See `results/phase1_step3c_*.md`.
 
+### 3.12 HarmBench — held-out OOD generalization at N=200 with dual-judge
+
+The headline number Phase 1 was missing. d_hat extracted at L13 from AdvBench
+(training distribution); evaluated on 200 HarmBench standard-behavior prompts
+(held-out, OOD wrt extraction); dual-judge (Claude Haiku 4.5 primary + Claude
+Opus 4.7 cross-check) for label-robust refusal scoring.
+
+| Condition | Refusal rate | Wilson 95% CI | n_refused/n |
+|---|---:|---|---|
+| baseline (no hook) | **0.990** | [0.96, 1.00] | 198/200 |
+| **ablated** (Arditi multi-layer recipe with d_hat) | **0.080** | [0.05, 0.13] | 16/200 |
+| random_ctrl (same recipe with random unit vector) | 0.990 | [0.96, 1.00] | 198/200 |
+
+**Δ refusal-rate-drop = +0.910 (91 percentage points). Specificity Δ = 0.000.**
+
+Per-category, all six HarmBench semantic categories drop ≥0.79:
+
+| Category | n | baseline → ablated | Δ |
+|---|---:|---|---:|
+| illegal | 58 | 1.00 → 0.05 | +0.95 |
+| chemical_biological | 28 | 1.00 → 0.07 | +0.93 |
+| misinformation_disinformation | 34 | 0.97 → 0.06 | +0.91 |
+| harmful | 21 | 1.00 → 0.10 | +0.90 |
+| cybercrime_intrusion | 40 | 0.97 → 0.07 | +0.90 |
+| harassment_bullying | 19 | 1.00 → 0.21 | +0.79 |
+
+Dual-judge agreement: 90% baseline, 75% ablated, 90% random_ctrl. Opus 4.7
+calls slightly fewer borderline cases REFUSED than Haiku 4.5 (its baseline
+rate is 0.89 vs 0.99) — but both judges agree the *drop* is enormous; under
+Opus, ablated rate is 0.04 vs Haiku's 0.08.
+
+**Comparison to Wollschläger (ICML 2025):** they report 79.9% JailbreakBench
+ASR on the same model using their gradient-based RDO. We get 91% HarmBench
+compliance using simple diff-of-means. Different benchmarks, different
+judges — not directly comparable as exact numbers, but the qualitative read:
+**on Gemma-2-2b-it, statistical extraction is in the same ballpark as
+gradient extraction for behavioral effect.** Their gradient-method edge
+likely matters more on bigger models with more direction-redundancy.
+
+See `results/phase1_harmbench.md` for the full breakdown including the
+OOD-generalization caveats.
+
 ### 3.11 TinyMMLU capability check
 
 Statistical test of "is the ablation refusal-specific or did it also

@@ -38,6 +38,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Auto-load mech-security/.env so ANTHROPIC_API_KEY is available before the
+# scorer arg check. (Source: this runner's early env check would otherwise
+# bail before src.eval_llm's lazy import would have triggered dotenv loading.)
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    pass
+
 import numpy as np
 import torch
 
@@ -197,63 +206,112 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--rand-seed", type=int, default=7)
     ap.add_argument("--max-new-tokens", type=int, default=128)
+    ap.add_argument("--resume-from", type=str, default=None,
+                    help="Path to a previous run_dir; skip generation, load generations.json, "
+                         "run judging only. Use this after a long-generation run whose judge step "
+                         "failed (e.g., API key missing) so you don't re-spend 5 hours of MPS.")
     args = ap.parse_args()
 
-    if args.scorer == "llm":
+    if args.scorer in ("llm", "dual_judge"):
         import os
         if not os.environ.get("ANTHROPIC_API_KEY"):
-            raise SystemExit("ANTHROPIC_API_KEY not set. Either export it or use --scorer substring.")
+            raise SystemExit("ANTHROPIC_API_KEY not set. Either export it, put it in "
+                              "mech-security/.env, or use --scorer substring.")
 
-    run_dir = new_run_dir("phase1_harmbench")
-    log.info("run_dir: %s | scorer=%s extract=L%d n_prompts=%s",
-             run_dir, args.scorer, args.extract_layer, args.n_prompts or "all")
+    # === Resume mode: skip everything up to judging ===
+    if args.resume_from:
+        resume_dir = Path(args.resume_from)
+        gen_path = resume_dir / "generations.json"
+        if not gen_path.exists():
+            raise SystemExit(f"--resume-from path has no generations.json: {gen_path}")
+        log.info("RESUME mode: loading generations from %s", gen_path)
+        gen_data = json.loads(gen_path.read_text())
+        prompts = gen_data["prompts"]
+        categories = gen_data["categories"]
+        baseline_gens = gen_data["baseline_gens"]
+        ablated_gens = gen_data["ablated_gens"]
+        random_ctrl_gens = gen_data["random_ctrl_gens"]
+        # Write judging results into the same run_dir so it's all together
+        run_dir = resume_dir
+        log.info("resume: %d prompts, %d categories, will write back into %s",
+                 len(prompts), len(set(categories)), run_dir)
+    else:
+        run_dir = new_run_dir("phase1_harmbench")
+        log.info("run_dir: %s | scorer=%s extract=L%d n_prompts=%s",
+                 run_dir, args.scorer, args.extract_layer, args.n_prompts or "all")
 
-    bundle = get_model()
-    log.info("model: %s | device=%s", bundle.name, bundle.device)
+        bundle = get_model()
+        log.info("model: %s | device=%s", bundle.name, bundle.device)
 
-    # === d_hat extraction from AdvBench (training distribution) ===
-    pairs_path = Path(__file__).resolve().parent.parent / "data/contrastive.jsonl"
-    harmful, harmless = load_jsonl_pairs(pairs_path)
-    extra = (f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{args.extract_layer}|"
-             f"resid_post|last_token|advbench_full")
-    key_h = content_hash(harmful, extra=extra + "|harmful")
-    key_l = content_hash(harmless, extra=extra + "|harmless")
-    log.info("extracting d_hat at L%d from AdvBench (%d/%d) ...",
-             args.extract_layer, len(harmful), len(harmless))
-    H = cached_activations(key_h, lambda: cache_resid(bundle, harmful, layer=args.extract_layer, show_progress=False))
-    L = cached_activations(key_l, lambda: cache_resid(bundle, harmless, layer=args.extract_layer, show_progress=False))
-    d_hat = unit(diff_of_means(H, L))
-    rand = random_unit_vector(bundle.d_model, seed=args.rand_seed)
-    log.info("d_hat extracted | scale_at_extract = %.2f",
-             float((H @ d_hat).mean() - (L @ d_hat).mean()))
+        # === d_hat extraction from AdvBench (training distribution) ===
+        pairs_path = Path(__file__).resolve().parent.parent / "data/contrastive.jsonl"
+        harmful, harmless = load_jsonl_pairs(pairs_path)
+        extra = (f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{args.extract_layer}|"
+                 f"resid_post|last_token|advbench_full")
+        key_h = content_hash(harmful, extra=extra + "|harmful")
+        key_l = content_hash(harmless, extra=extra + "|harmless")
+        log.info("extracting d_hat at L%d from AdvBench (%d/%d) ...",
+                 args.extract_layer, len(harmful), len(harmless))
+        H = cached_activations(key_h, lambda: cache_resid(bundle, harmful, layer=args.extract_layer, show_progress=False))
+        L = cached_activations(key_l, lambda: cache_resid(bundle, harmless, layer=args.extract_layer, show_progress=False))
+        d_hat = unit(diff_of_means(H, L))
+        rand = random_unit_vector(bundle.d_model, seed=args.rand_seed)
+        log.info("d_hat extracted | scale_at_extract = %.2f",
+                 float((H @ d_hat).mean() - (L @ d_hat).mean()))
 
-    # === Load HarmBench (held-out, OOD wrt extraction set) ===
-    log.info("loading HarmBench ...")
-    rows = load_harmbench(n_prompts=args.n_prompts, seed=args.seed)
-    prompts = [r["prompt"] for r in rows]
-    categories = [r["category"] for r in rows]
-    log.info("HarmBench rows: %d | unique categories: %s",
-             len(rows), sorted(set(categories)))
+        # === Load HarmBench (held-out, OOD wrt extraction set) ===
+        log.info("loading HarmBench ...")
+        rows = load_harmbench(n_prompts=args.n_prompts, seed=args.seed)
+        prompts = [r["prompt"] for r in rows]
+        categories = [r["category"] for r in rows]
+        log.info("HarmBench rows: %d | unique categories: %s",
+                 len(rows), sorted(set(categories)))
 
-    # === Run three conditions ===
+        # === Run three conditions ===
+        log.info("[1/3] baseline (no hook) generations on n=%d ...", len(prompts))
+        baseline_gens = _gen(bundle, prompts, max_new_tokens=args.max_new_tokens)
+
+        log.info("[2/3] ablated (d_hat) generations on n=%d ...", len(prompts))
+        with ablate_dir(bundle.model, d_hat):
+            ablated_gens = _gen(bundle, prompts, max_new_tokens=args.max_new_tokens)
+
+        log.info("[3/3] random-direction ablation on n=%d ...", len(prompts))
+        with ablate_dir(bundle.model, rand):
+            random_ctrl_gens = _gen(bundle, prompts, max_new_tokens=args.max_new_tokens)
+
+        # === SAVE GENERATIONS NOW (before judging, so judge crashes don't lose hours of MPS) ===
+        gen_record = {
+            "step": "phase1_harmbench_generations",
+            "model": bundle.name,
+            "extract_layer": args.extract_layer,
+            "n_prompts": len(prompts),
+            "prompts": prompts,
+            "categories": categories,
+            "baseline_gens": baseline_gens,
+            "ablated_gens": ablated_gens,
+            "random_ctrl_gens": random_ctrl_gens,
+        }
+        write_json(run_dir / "generations.json", gen_record)
+        log.info("generations saved -> %s (resume from this with --resume-from %s)",
+                 run_dir / "generations.json", run_dir)
+
+    # Model name — survives both fresh and resume paths
+    model_name = bundle.name if not args.resume_from else gen_data["model"]
+    extract_layer = args.extract_layer if not args.resume_from else gen_data["extract_layer"]
+
+    # === Judge (runs in both fresh and resume modes) ===
     conditions = {}
-
-    log.info("[1/3] baseline (no hook) generations on n=%d ...", len(prompts))
-    baseline_gens = _gen(bundle, prompts, max_new_tokens=args.max_new_tokens)
-
-    log.info("[2/3] ablated (d_hat) generations on n=%d ...", len(prompts))
-    with ablate_dir(bundle.model, d_hat):
-        ablated_gens = _gen(bundle, prompts, max_new_tokens=args.max_new_tokens)
-
-    log.info("[3/3] random-direction ablation on n=%d ...", len(prompts))
-    with ablate_dir(bundle.model, rand):
-        random_ctrl_gens = _gen(bundle, prompts, max_new_tokens=args.max_new_tokens)
-
-    # === Judge ===
     log.info("judging all 3 × %d completions with scorer=%s ...", len(prompts), args.scorer)
     baseline_v = _judge_all(list(zip(prompts, baseline_gens)), args.scorer, args.judge_model_2)
     ablated_v = _judge_all(list(zip(prompts, ablated_gens)), args.scorer, args.judge_model_2)
     random_v = _judge_all(list(zip(prompts, random_ctrl_gens)), args.scorer, args.judge_model_2)
+
+    # SAVE VERDICTS NOW — defensive against crashes during record-building
+    write_json(run_dir / "verdicts.json", {
+        "baseline_v": baseline_v, "ablated_v": ablated_v, "random_v": random_v,
+        "scorer": args.scorer,
+    })
+    log.info("verdicts saved -> %s", run_dir / "verdicts.json")
 
     conditions["baseline"] = summarize(baseline_v)
     conditions["ablated"] = summarize(ablated_v)
@@ -285,8 +343,8 @@ def main() -> int:
 
     record = {
         "step": "phase1_harmbench_eval",
-        "model": bundle.name,
-        "extract_layer": args.extract_layer,
+        "model": model_name,
+        "extract_layer": extract_layer,
         "scorer": args.scorer,
         "n_prompts": len(prompts),
         "categories": sorted(set(categories)),
