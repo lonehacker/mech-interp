@@ -398,7 +398,7 @@ The result is not explained by the alternatives being small perturbations of the
 </p>
 <div class="finding-box">
 <p>
-<strong>Finding.</strong> On Gemma-2-2b-it, the L13 diff-of-means direction is the only causal refusal direction recovered by the statistical extraction methods tested here. Several near-orthogonal alternatives are classification-equivalent but behave like a random direction under ablation. <strong>This effect carries to held-out HarmBench at N = 200</strong> (see §4.8): the random-direction control sits at 99% baseline refusal while the diff-of-means ablation drops to 8%, in spite of the random direction being a unit vector of identical norm. Classification structure is rich in 2304-dimensional residual space; causal structure is narrow.
+<strong>Finding.</strong> On Gemma-2-2b-it, the L13 diff-of-means direction is the only causal refusal direction recovered by the statistical extraction methods tested here. Several near-orthogonal alternatives are classification-equivalent but behave like a random direction under ablation. <strong>This effect carries to held-out HarmBench at N = 200</strong> (see §4.8): under Arditi-style ablation on 200 HarmBench prompts, the diff-of-means direction drops refusal from 99% to 8%, the random control stays at 99%, and an LDA-bootstrap-top-1 direction (cos = 0.17 with d̂, a near-orthogonal classification-equivalent direction) gives 197/200 = 98.5% refusal — matching the random control, not the causal direction. 17× scale-up from the AdvBench N = 12 test; qualitative picture unchanged. Classification structure is rich in 2304-dimensional residual space; causal structure is narrow.
 </p>
 </div>
 <p>
@@ -537,6 +537,24 @@ Dual-judge scoring: Claude Haiku 4.5 primary, Claude Opus 4.7 cross-check on eve
 </div>
 <p>
 <strong>Dual-judge agreement:</strong> 90% on baseline, 75% on ablated, 90% on random control. Opus 4.7 calls slightly fewer borderline cases REFUSED than Haiku 4.5 (its baseline rate is 0.89 vs 0.99) — but both judges agree the <em>drop</em> is enormous; under Opus, the ablated rate is 0.04 vs Haiku's 0.08. Lower agreement on the ablated condition reflects that post-ablation completions land in genuinely ambiguous territory where judges legitimately disagree.
+</p>
+<h4 style="font-family: var(--sans); font-size: 0.95rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted); margin-top: 2rem; margin-bottom: 0.6rem;">Methodology cross-check at this scale</h4>
+<p>
+The subspace-ablation experiment (§3) showed at N = 12 on AdvBench that statistical-extraction directions other than d̂ — including LDA-bootstrap-top-1, LDA orthogonal subspaces, and L3 diff-of-means — are <em>classification-equivalent but causally inert</em> under Arditi-style ablation. Same test, scaled up: ablate one LDA-bootstrap-top-1 direction (cos = 0.17 with d̂, derived by bootstrap-resampling AdvBench and running iterative LDA on it) on the same 200 HarmBench prompts. Result:
+</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Direction ablated on HarmBench (N = 200)</th><th>Refusal rate</th><th>Wilson 95% CI</th></tr></thead>
+<tbody>
+<tr><td>Baseline (no hook)</td><td class="num">0.990</td><td class="num">[0.96, 1.00]</td></tr>
+<tr class="highlight"><td><strong>L13 diff-of-means d̂</strong> (causal)</td><td class="num">0.080</td><td class="num">[0.05, 0.13]</td></tr>
+<tr><td><strong>LDA-top-1, bootstrap 101</strong> (cos 0.17 with d̂)</td><td class="num">0.985</td><td class="num">[0.96, 0.99]</td></tr>
+<tr><td>Random unit vector (control)</td><td class="num">0.990</td><td class="num">[0.96, 1.00]</td></tr>
+</tbody>
+</table>
+</div>
+<p>
+The LDA-bootstrap direction is a perfect classifier on the AdvBench split (AUC = 1.0) and is near-orthogonal to d̂. Under Arditi-style ablation on a 17× larger held-out evaluation set on a different benchmark, it behaves <em>identically to a random unit vector</em>. The classification-vs-causation gap from N = 12 (§3) reproduces at N = 200 on a different benchmark.
 </p>
 <div class="finding-box">
 <p>
