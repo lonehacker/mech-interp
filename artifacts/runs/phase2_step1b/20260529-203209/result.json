@@ -1,0 +1,33 @@
+{
+  "step": "phase2_step1b_controls",
+  "model": "gemma-2-2b-it",
+  "data": "/Users/anshulsinghle/safe_ai/mech-security/data/contrastive.jsonl",
+  "peak_layer": 13,
+  "n_random_seeds": 5,
+  "n_shuffle_seeds": 5,
+  "real_direction_auc": 0.9980888888888889,
+  "random_aucs": [
+    0.17253333333333334,
+    0.6356444444444445,
+    0.28306666666666663,
+    0.2568888888888889,
+    0.7187111111111112
+  ],
+  "random_mean": 0.4133688888888889,
+  "random_std": 0.2460217061586936,
+  "shuffled_aucs": [
+    0.3293333333333333,
+    0.4644888888888889,
+    0.3195111111111111,
+    0.41075555555555554,
+    0.5139999999999999
+  ],
+  "shuffled_mean": 0.40761777777777775,
+  "shuffled_std": 0.08433947042521038,
+  "z_real_vs_random": 2.376700857536663,
+  "z_real_vs_shuffled": 7.001124243893878,
+  "controls_pass": {
+    "shuffled_near_chance_within_2sigma": true,
+    "real_well_above_random": false
+  }
+}

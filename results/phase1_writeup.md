@@ -369,6 +369,52 @@ The methodological lesson generalizes: without bootstrap validation,
 finite-N overfitting in high-D activation space (d_model = 2304, n = 300)
 produces inflated dimensionality counts that don't replicate.
 
+### 5.4 Random-direction baselines should be reported as distributions, not single floors
+
+A second methodological-hygiene note in the same flavor as §5.3. Earlier
+drafts of the §3.13 cross-distribution AUC table reported the
+random-direction AUC as a single sample: 0.611 on AdvBench, 0.533 on
+HarmBench. **That number is a single draw from a distribution that,
+across 5 seeds at L13, has standard deviation 0.25 on AdvBench (mean 0.41,
+range [0.17, 0.72]) and 0.17 on HarmBench (mean 0.40, range [0.20, 0.65]).**
+The distribution is bimodal because a random unit vector either partially
+aligns with the harmful-vs-harmless mean shift in activation space (high
+AUC) or opposes it (low AUC). A single-seed sample of a wide bimodal
+distribution is exactly the kind of under-characterized control that the
+§3.9 / §3.13 LDA-bootstrap experiments were set up to *avoid*; reporting a
+"floor" instead of a distribution was a methodological miss in earlier
+drafts, now corrected. See `results/phase1_random_baseline_5seed.md` for
+the per-seed numbers.
+
+The practical lesson, separable from the specific numbers: when a
+contrastive set has any vocabulary or topic mean shift (and most published
+harmful-vs-harmless contrastive sets do), random-direction classification
+baselines should be reported as distributions over multiple seeds, not as
+single-sample floors. Causal inertness is established by ablation
+(intervention on behavior), not by classification (the AUC table) —
+ablating any LDA-bootstrap direction leaves refusal unchanged regardless
+of whether those directions are "real refusal classifiers" or "vocabulary
+classifiers that correlate with harmfulness because harmful prompts have
+distinctive vocabulary." The classification audit characterizes what the
+alternative directions are; the causal claim that only diff-of-means d̂
+mediates refusal is established by the intervention.
+
+The implication for §3.13's framing — sharpened from "multiple
+classification-equivalent directions, only one is causal" to the more
+precise statement: the residual stream has many ways to linearly separate
+harmful from harmless prompts (vocabulary, topic, sentiment, …), but only
+the direction that aligns with the *refusal mechanism* produces a causal
+effect under ablation. The diff-of-means d̂ picks up both vocabulary and
+refusal because harmful prompts have both; the LDA bootstraps pick up
+near-orthogonal vocabulary subspaces; ablating them leaves the refusal
+mechanism intact. **§3.10c (the fictional-framing causal half) makes the
+same thesis at the prompt level rather than the direction level**, and is
+immune to the vocabulary confound — fictional-framing prompts that d̂
+*classifies as harmless* (below midpoint) nonetheless collapse to
+compliance when d̂ is ablated, which can't be explained by any
+vocabulary-direction reading. §3.10c is the cleaner demonstration; §3.13
+is the direction-level cross-check.
+
 ## 6. Phase 2 protocol
 
 **Target: `Qwen/Qwen2.5-3B-Instruct`.** The original master spec named

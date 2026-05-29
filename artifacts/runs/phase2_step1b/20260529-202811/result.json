@@ -1,0 +1,33 @@
+{
+  "step": "phase2_step1b_controls",
+  "model": "Qwen/Qwen2.5-3B-Instruct",
+  "data": "/Users/anshulsinghle/safe_ai/mech-security/data/code_contrastive.jsonl",
+  "peak_layer": 14,
+  "n_random_seeds": 5,
+  "n_shuffle_seeds": 5,
+  "real_direction_auc": 1.0,
+  "random_aucs": [
+    0.8349777777777778,
+    0.06182222222222222,
+    0.9798666666666667,
+    0.07315555555555557,
+    0.049111111111111105
+  ],
+  "random_mean": 0.3997866666666667,
+  "random_std": 0.46630604309526213,
+  "shuffled_aucs": [
+    0.4544,
+    0.4629333333333333,
+    0.48186666666666667,
+    0.5053777777777778,
+    0.5140888888888888
+  ],
+  "shuffled_mean": 0.48373333333333335,
+  "shuffled_std": 0.025915780025324086,
+  "z_real_vs_random": 1.2871661052239787,
+  "z_real_vs_shuffled": 19.92093875477362,
+  "controls_pass": {
+    "shuffled_near_chance_within_2sigma": true,
+    "real_well_above_random": false
+  }
+}
