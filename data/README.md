@@ -1,6 +1,9 @@
 # data/
 
-`contrastive.jsonl` — the frozen contrastive set used by every Phase 1 step.
+Two contrastive sets, one per phase:
+
+- `contrastive.jsonl` — Phase 1 (Gemma-2-2b-it): 150 AdvBench harmful + 150 length-matched Alpaca harmless. Frozen.
+- `code_contrastive.jsonl` — Phase 2 (Qwen2.5-3B-Instruct): 150 code-themed harmful (HarmBench cybercrime_intrusion + AdvBench code-keyword filter) + 150 length-matched CodeAlpaca harmless. Reproducible from `experiments/build_code_contrastive.py` with seed 20260529; content hash logged at build time. Median char length 76 (harmful) vs 75 (harmless).
 
 ## Format
 
