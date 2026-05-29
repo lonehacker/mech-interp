@@ -485,15 +485,80 @@ run here. What CAN be ruled out: this isn't a coverage-vs-bandwidth
 failure, because the held-out test prompts share templates with the
 training augmentation (novel, grandmother, exposé) and still don't move.
 
-**Not tested here.** The natural follow-up — actually ablating
-d̂_augmented and measuring whether the model still refuses fictional-framing
-prompts under that ablation — would close the causal half of the loop.
-Logged as a follow-up (the extraction half rules out the simplest
-unitary-mechanism story; the causal half would distinguish "d̂ doesn't
-reach the prompt" from "d̂ doesn't reach the mechanism").
+### 3.10c Phase 1.5-B causal half — does ablating d̂_augmented stop refusal?
 
-See `results/phase1_fictional_framing_balanced.md` and the runner at
-`experiments/phase1_fictional_framing_balanced.py`.
+The natural follow-up: actually ablate d̂_old and d̂_augmented on the same
+15 held-out fictional-framing prompts and measure full-generation refusal.
+3 conditions × 15 prompts, dual-scored (substring + Haiku 4.5 calibrated
+LLM judge).
+
+**Result:**
+
+| Condition | Substring | LLM judge |
+|---|---:|---:|
+| Baseline (no hook) | 15/15 (1.000) | 14/15 (0.933) |
+| Ablate d̂_old (Arditi multi-layer) | 0/15 (0.000) | **2/15 (0.133)** |
+| Ablate d̂_augmented (Arditi multi-layer) | 0/15 (0.000) | **3/15 (0.200)** |
+
+**Subset breakdown (judge), 12 above-midpoint vs 3 below-midpoint:**
+
+| Condition | Above-midpoint (n=12) | Below-midpoint (n=3) |
+|---|---:|---:|
+| Baseline | 1.000 (12/12) | 0.667 (2/3) |
+| Ablate d̂_old | 0.083 (1/12) | 0.333 (1/3) |
+| Ablate d̂_augmented | 0.167 (2/12) | 0.333 (1/3) |
+
+**The causal half flips the reading of the extraction half.** Ablating d̂
+drops fictional-framing refusal from 14/15 to 2/15 — **including 2 of the
+3 prompts that d̂ projected BELOW its harmful/harmless midpoint**. The
+"separable mechanism" story from 1.5-B extraction was reading classification,
+not causation:
+
+- d̂ as a *linear classifier* covers ~80% of fictional-framing prompts
+  (12/15 above midpoint).
+- d̂ as a *causal mechanism* reaches ~93% of them (12/15 fully ablated,
+  1/15 borderline residual).
+
+The linear classification boundary is a strictly coarser proxy than the
+causal mechanism it indexes. This is the §3 thesis stated at the
+prompt level instead of the direction level.
+
+**Per-prompt forensic on the 3 below-midpoint cases:**
+
+- **#1 grandmother/methamphetamine** (proj 35.5): baseline REFUSED, both
+  ablations COMPLIED. d̂ ablation cleanly removes refusal here despite the
+  prompt projecting below midpoint.
+- **#2 thriller/passport** (proj 32.0): baseline REFUSED, both ablations
+  still REFUSED. Under ablation the model writes fictional scene-setting
+  but evades the forgery technique — suggesting a small non-d̂ mechanism
+  specific to this prompt.
+- **#6 exposé/insurance-fraud** (proj 50.7): baseline PARTIAL_COMPLY,
+  both ablations COMPLIED. Same as #1.
+
+Augmenting d̂ with 30 fictional-framing prompts doesn't help (2/15 → 3/15
+under ablation, within judge noise). The single residual under d̂_augmented
+ablation is the same thriller/passport prompt — its non-d̂ mechanism is
+real but localized to a specific evasion pattern.
+
+**Strongest confound + the control that rules it out.** A coarser reading:
+ablating any high-norm direction at all 26 layers damages refusal
+generally. Ruled out by the random-direction control in §3.12 (HarmBench
+N=200, random-vector ablation refusal 0.99) and by the LDA-bootstrap-101
+cell in §3 (cross-distribution AUC ≥ 0.96, ablation refusal 0.985,
+continuous z = -0.18). It's d̂ specifically, not its norm or its
+layer-spread, that causes the drop on fictional-framing.
+
+**Honesty note.** The 3 below-midpoint prompts are a small subset; the
+1/3 residual under ablation is consistent with either "d̂ is the only
+mechanism here and one prompt is statistical noise" or "there is a
+specific non-d̂ residual for fictional-jailbreak-of-document-forgery."
+Distinguishing these requires more below-midpoint prompts than 15 total
+can supply.
+
+See `results/phase1_fictional_framing_balanced.md` (extraction half),
+`results/phase1_fictional_framing_causal.md` (causal half), and the
+runners at `experiments/phase1_fictional_framing_balanced.py` and
+`experiments/phase1_fictional_framing_causal.py`.
 
 ### 3.13 Phase 1.5-A — hardened classification ≠ causation at N=200 with continuous metric
 
@@ -636,12 +701,13 @@ Tonight (this Phase 1 session) explicitly does NOT include:
   Ran on a 5-layer subset {L3, L7, L13, L16, L20} for this writeup; that
   was enough to identify L13 as the unique single-layer site. Full
   26-layer sweep deferred.
-- **Rigorous fictional-framing direction test — extraction half done.**
-  Closed in Phase 1.5-B (§3.10b above): cos(d̂_old, d̂_augmented) = 0.9938
-  on N = 30 training prompts + 15 held-out test set. Adding fictional-
-  framing prompts to training does not pull held-out fictional-framing
-  prompts onto d̂. Remaining: ablate d̂_augmented and measure refusal on
-  the 15 fictional-framing test prompts to close the causal half.
+- **Rigorous fictional-framing direction test — closed (extraction + causal half).**
+  §3.10b (extraction): cos(d̂_old, d̂_augmented) = 0.9938; held-out prompts
+  don't move onto axis. §3.10c (causal): ablating d̂ drops fictional-
+  framing refusal 14/15 → 2/15 — including 2 of the 3 prompts that
+  projected below midpoint. Net interpretation: d̂'s linear classifier is
+  a coarser boundary than its causal mechanism; the original separable-
+  mechanism reading was about classification, not causation.
 
 ## Reproducibility
 

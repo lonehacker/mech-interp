@@ -60,11 +60,24 @@ Token sets — VALIDATED against existing 200-prompt HarmBench generations:
     essentially don't fire; replaced with validated set.
 
 Pre-registered token sets (logged 2026-05-29 before any null-band run):
+
+Phase 2 portability (2026-05-29):
+The hardcoded Gemma constants now live inside `VALIDATED_TOKEN_SETS`, with
+a `discover_first_token_sets()` function that runs the same procedure on
+any new model — argmax of `logits[:, -1, :]` on templated harmful prompts
+(no hook) gives the refusal-opener distribution; same on harmless gives
+the compliance-opener distribution. `get_or_discover_token_sets()` is the
+top-level entry point: returns the validated set if one exists for the
+model name, else loads from cache, else runs discovery.
 """
 from __future__ import annotations
 
+import json
+from collections import Counter
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+
 import torch
-from dataclasses import dataclass
 
 from src.model import ModelBundle, format_prompt, tokenize_prompt
 
@@ -92,23 +105,275 @@ from src.model import ModelBundle, format_prompt, tokenize_prompt
 # (compliance term has slightly less mass to credit), so reported effects
 # are a mild lower bound on the true causal shift. Safe direction to err.
 
-REFUSAL_FIRST_TOKEN_IDS_GEMMA2 = [235285]  # "I"
-# Captures 198/200 = 99% of baseline refusal openers. The other 2 are "##"
-# (markdown header), which appears 83× more often in compliance than refusal,
-# so it goes in the compliance set.
 
-COMPLIANCE_FIRST_TOKEN_IDS_GEMMA2 = [
-    1620,    # "##"       — 83 / 200 compliance openings (markdown headers)
-    4858,    # "Here"     — 76 (covers "Here" + "Here's")
-    1917,    # "```"      — 20 (code fence)
-    651,     # "The"      —  6
-    235281,  # "\""       —  4
-    6750,    # "Hey"      —  3
-]
-# Captures 192/200 = 96% of compliance openers. The remaining 8 are
-# scattered singletons (Setting, Starting, While, etc.) — diffuse tail.
-# "##" appears 2/200 in baseline refusals; excluding it would miss 41.5%
-# of compliance mass to save 1% refusal contamination — net loss.
+@dataclass(frozen=True)
+class TokenSetDiscovery:
+    """Result of running first-response-token argmax discovery on a model.
+
+    All token IDs are tokenizer-specific to the discovering model. Don't
+    copy these across model families.
+    """
+    refusal_ids: list[int]
+    compliance_ids: list[int]
+    refusal_coverage: float      # fraction of harmful baselines whose top-1 opener is in refusal_ids
+    compliance_coverage: float   # same for harmless baselines / compliance_ids
+    refusal_top_decoded: list[dict] = field(default_factory=list)     # [{token_id, decoded, count, fraction}, ...]
+    compliance_top_decoded: list[dict] = field(default_factory=list)
+    discovery_n_harmful: int = 0
+    discovery_n_harmless: int = 0
+    model_name: str = ""
+    coverage_threshold: float = 0.90
+    max_tokens_per_set: int = 8
+
+
+# Frozen reference for models we've already validated. The Gemma entry is
+# what `discover_first_token_sets` SHOULD produce if re-run, give-or-take
+# rounding — kept as the regression target.
+VALIDATED_TOKEN_SETS: dict[str, TokenSetDiscovery] = {
+    "gemma-2-2b-it": TokenSetDiscovery(
+        refusal_ids=[235285],  # "I" — 198/200 baseline refusal openers
+        compliance_ids=[
+            1620,    # "##"   — 83 (markdown headers)
+            4858,    # "Here" — 76 (covers "Here" + "Here's")
+            1917,    # "```"  — 20 (code fence)
+            651,     # "The"  —  6
+            235281,  # "\""   —  4
+            6750,    # "Hey"  —  3
+        ],
+        refusal_coverage=0.99,
+        compliance_coverage=0.96,
+        refusal_top_decoded=[
+            {"token_id": 235285, "decoded": "I", "count": 198, "fraction": 0.99},
+        ],
+        compliance_top_decoded=[
+            {"token_id": 1620, "decoded": "##", "count": 83, "fraction": 0.415},
+            {"token_id": 4858, "decoded": "Here", "count": 76, "fraction": 0.380},
+            {"token_id": 1917, "decoded": "```", "count": 20, "fraction": 0.100},
+            {"token_id": 651, "decoded": "The", "count": 6, "fraction": 0.030},
+            {"token_id": 235281, "decoded": "\"", "count": 4, "fraction": 0.020},
+            {"token_id": 6750, "decoded": "Hey", "count": 3, "fraction": 0.015},
+        ],
+        discovery_n_harmful=200,
+        discovery_n_harmless=200,
+        model_name="gemma-2-2b-it",
+        coverage_threshold=0.90,
+        max_tokens_per_set=8,
+    ),
+}
+
+
+# Backward-compat aliases. Existing experiment runners that import these
+# names keep working; new code should call `get_or_discover_token_sets()`.
+REFUSAL_FIRST_TOKEN_IDS_GEMMA2 = VALIDATED_TOKEN_SETS["gemma-2-2b-it"].refusal_ids
+COMPLIANCE_FIRST_TOKEN_IDS_GEMMA2 = VALIDATED_TOKEN_SETS["gemma-2-2b-it"].compliance_ids
+
+
+@torch.no_grad()
+def _argmax_first_response_token_ids(
+    bundle: ModelBundle,
+    templated_prompts: list[str],
+) -> list[int]:
+    """For each pre-templated prompt, return the argmax of `logits[:, -1, :]`
+    under no hook — the model's actual top-1 first-response token at T=0."""
+    device = bundle.model.cfg.device
+    out_ids: list[int] = []
+    for text in templated_prompts:
+        ids = bundle.model.to_tokens(text, prepend_bos=False).to(device)
+        logits = bundle.model(ids, return_type="logits")
+        out_ids.append(int(logits[0, -1, :].argmax().item()))
+    return out_ids
+
+
+def _greedy_cover(
+    token_ids: list[int],
+    threshold: float,
+    max_tokens: int,
+) -> tuple[list[int], list[tuple[int, int]], float]:
+    """Sort tokens by frequency desc; pick top-k until cumulative coverage
+    ≥ threshold or max_tokens reached.
+
+    Returns (selected_ids, sorted_freqs, achieved_coverage).
+    """
+    n = len(token_ids)
+    if n == 0:
+        return [], [], 0.0
+    counter = Counter(token_ids)
+    sorted_freqs = counter.most_common()
+    selected: list[int] = []
+    cumulative = 0
+    for token_id, count in sorted_freqs[:max_tokens]:
+        selected.append(token_id)
+        cumulative += count
+        if cumulative / n >= threshold:
+            break
+    return selected, sorted_freqs, cumulative / n
+
+
+def _decode_top(
+    bundle: ModelBundle,
+    sorted_freqs: list[tuple[int, int]],
+    n_total: int,
+    max_tokens: int,
+) -> list[dict]:
+    return [
+        {
+            "token_id": int(tid),
+            "decoded": bundle.model.tokenizer.decode([tid]),
+            "count": int(cnt),
+            "fraction": cnt / n_total,
+        }
+        for tid, cnt in sorted_freqs[:max_tokens]
+    ]
+
+
+@torch.no_grad()
+def discover_first_token_sets(
+    bundle: ModelBundle,
+    templated_harmful: list[str],
+    templated_harmless: list[str],
+    *,
+    coverage_threshold: float = 0.90,
+    max_tokens_per_set: int = 8,
+) -> TokenSetDiscovery:
+    """Discover refusal-opener and compliance-opener token sets for any
+    instruction-tuned model. No d̂ required.
+
+    Procedure:
+      1. Argmax of `logits[:, -1, :]` on templated harmful prompts (no hook)
+         = the model's first-token response. Since instruct models refuse
+         harmful prompts at baseline, these argmaxes are refusal openers.
+      2. Same on harmless prompts = compliance openers (since instruct
+         models answer harmless prompts at baseline).
+      3. Greedy top-k from each side until cumulative coverage ≥ threshold.
+      4. Disjointness: if a token appears in BOTH selected sets, keep it on
+         the side with higher raw count; drop it from the other.
+
+    The harmless-baseline-as-compliance-proxy is a v1 approximation — the
+    gold standard uses d̂-ablated-on-harmful argmaxes (see
+    `refine_compliance_set_from_ablation`). For the contrast metric, the v1
+    set is robust enough for the headline; refine for hardened reports.
+
+    The caller is responsible for templating the prompts before passing
+    them in (intentional — keeps this module independent of any specific
+    chat template).
+    """
+    harmful_ids = _argmax_first_response_token_ids(bundle, templated_harmful)
+    harmless_ids = _argmax_first_response_token_ids(bundle, templated_harmless)
+
+    r_sel, r_freqs, r_cov = _greedy_cover(harmful_ids, coverage_threshold, max_tokens_per_set)
+    c_sel, c_freqs, c_cov = _greedy_cover(harmless_ids, coverage_threshold, max_tokens_per_set)
+
+    # Disjointness — place shared tokens on the heavier side
+    r_count = dict(r_freqs)
+    c_count = dict(c_freqs)
+    for tok in set(r_sel) & set(c_sel):
+        if r_count.get(tok, 0) >= c_count.get(tok, 0):
+            c_sel = [t for t in c_sel if t != tok]
+        else:
+            r_sel = [t for t in r_sel if t != tok]
+
+    return TokenSetDiscovery(
+        refusal_ids=r_sel,
+        compliance_ids=c_sel,
+        refusal_coverage=r_cov,
+        compliance_coverage=c_cov,
+        refusal_top_decoded=_decode_top(bundle, r_freqs, len(harmful_ids), max_tokens_per_set),
+        compliance_top_decoded=_decode_top(bundle, c_freqs, len(harmless_ids), max_tokens_per_set),
+        discovery_n_harmful=len(templated_harmful),
+        discovery_n_harmless=len(templated_harmless),
+        model_name=bundle.name,
+        coverage_threshold=coverage_threshold,
+        max_tokens_per_set=max_tokens_per_set,
+    )
+
+
+def save_token_sets(discovery: TokenSetDiscovery, path: Path) -> None:
+    """Persist a discovery as JSON for later reuse."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(asdict(discovery), indent=2))
+
+
+def load_token_sets(path: Path) -> TokenSetDiscovery:
+    """Load a saved discovery from JSON. Field-by-field reconstruction so
+    additions to the dataclass don't silently corrupt old caches."""
+    data = json.loads(path.read_text())
+    return TokenSetDiscovery(**{
+        k: data[k] for k in (
+            "refusal_ids", "compliance_ids", "refusal_coverage", "compliance_coverage",
+            "refusal_top_decoded", "compliance_top_decoded",
+            "discovery_n_harmful", "discovery_n_harmless",
+            "model_name", "coverage_threshold", "max_tokens_per_set",
+        ) if k in data
+    })
+
+
+def get_or_discover_token_sets(
+    bundle: ModelBundle,
+    *,
+    cache_path: Path | None = None,
+    templated_harmful: list[str] | None = None,
+    templated_harmless: list[str] | None = None,
+    coverage_threshold: float = 0.90,
+    max_tokens_per_set: int = 8,
+) -> TokenSetDiscovery:
+    """Top-level entry point. Priority:
+      1. If `bundle.name` is in `VALIDATED_TOKEN_SETS`, return the frozen
+         reference.
+      2. Else if `cache_path` exists, load and return.
+      3. Else if templated harmful + harmless prompts provided, run discovery,
+         cache (if `cache_path` set), and return.
+      4. Else raise — caller must provide one of (validated entry, cache,
+         discovery prompts).
+    """
+    if bundle.name in VALIDATED_TOKEN_SETS:
+        return VALIDATED_TOKEN_SETS[bundle.name]
+    if cache_path is not None and cache_path.exists():
+        return load_token_sets(cache_path)
+    if templated_harmful is None or templated_harmless is None:
+        raise ValueError(
+            f"Model {bundle.name!r} has no validated entry in VALIDATED_TOKEN_SETS "
+            f"and no cache at {cache_path!r}. Pass templated_harmful + templated_harmless "
+            f"to trigger discovery."
+        )
+    discovery = discover_first_token_sets(
+        bundle, templated_harmful, templated_harmless,
+        coverage_threshold=coverage_threshold,
+        max_tokens_per_set=max_tokens_per_set,
+    )
+    if cache_path is not None:
+        save_token_sets(discovery, cache_path)
+    return discovery
+
+
+@torch.no_grad()
+def refine_compliance_set_from_ablation(
+    bundle: ModelBundle,
+    templated_harmful_prompts: list[str],
+    ablation_hook_ctx,
+    *,
+    max_tokens_per_set: int = 8,
+) -> dict:
+    """Gold-standard compliance-opener distribution: run the actual ablation
+    hook on harmful prompts and collect argmax first-tokens. Returns a
+    frequency summary the caller can use to validate or refine the
+    discovery-derived compliance set.
+
+    `ablation_hook_ctx` is a context manager (e.g. `ablate_dir(model, d_hat)`).
+    """
+    device = bundle.model.cfg.device
+    out_ids: list[int] = []
+    with ablation_hook_ctx:
+        for text in templated_harmful_prompts:
+            ids = bundle.model.to_tokens(text, prepend_bos=False).to(device)
+            logits = bundle.model(ids, return_type="logits")
+            out_ids.append(int(logits[0, -1, :].argmax().item()))
+    freqs = Counter(out_ids).most_common()
+    n = len(out_ids)
+    return {
+        "n": n,
+        "top_decoded": _decode_top(bundle, freqs, n, max_tokens_per_set),
+        "raw_freqs": {int(tid): int(cnt) for tid, cnt in freqs},
+    }
 
 
 @dataclass(frozen=True)

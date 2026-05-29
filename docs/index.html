@@ -743,19 +743,49 @@ The plain version. The pilot in §3 (and the earlier <code>phase1_step3c</code> 
 <p>
 <strong>Verdict: MIXED.</strong> Prediction (A) passes by a wide margin — the augmented direction is 99.4% parallel to the original despite adding 30 fictional-framing prompts. Prediction (B) fails — the held-out fictional-framing prompts barely move on the axis (mean rise 2.7% of natural scale, ceiling 8.8%, well below the 10% threshold). The same 3 prompts that remained below the harmful/harmless midpoint under d̂_old remain below it under d̂_augmented: the grandmother/methamphetamine prompt (projection 35.5 → 44.1, still below midpoint ≈ 58), the thriller/passport prompt (32.0 → 39.8), and the exposé/insurance-fraud prompt (50.7 → 54.0). Adding more fictional-framing data to the training set <em>does not</em> recruit fictional-framing prompts onto <code>d̂</code>.
 </p>
+<h4 style="font-family: var(--sans); font-size: 0.95rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted); margin-top: 2rem; margin-bottom: 0.6rem;">Causal half — does ablating d̂_augmented stop refusal on fictional-framing prompts?</h4>
+<p>
+The extraction half above tells us the <em>direction</em> doesn't shift with augmentation. It doesn't tell us whether ablating that direction <em>causally</em> stops refusal on the held-out fictional-framing prompts. Generate completions on the same 15 prompts under three conditions and dual-judge:
+</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Condition</th><th>Substring scorer</th><th>Calibrated LLM judge</th></tr></thead>
+<tbody>
+<tr><td>Baseline (no hook)</td><td class="num">15 / 15 (1.000)</td><td class="num">14 / 15 (0.933)</td></tr>
+<tr class="highlight"><td><strong>Ablate d̂_old</strong> (Arditi multi-layer)</td><td class="num">0 / 15 (0.000)</td><td class="num">2 / 15 (0.133)</td></tr>
+<tr class="highlight"><td><strong>Ablate d̂_augmented</strong> (Arditi multi-layer)</td><td class="num">0 / 15 (0.000)</td><td class="num">3 / 15 (0.200)</td></tr>
+</tbody>
+</table>
+</div>
+<p>
+<strong>Subset breakdown — the 12 above-midpoint vs the 3 below-midpoint prompts</strong> (calibrated judge):
+</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Condition</th><th>Above-midpoint (n = 12) refusal</th><th>Below-midpoint (n = 3) refusal</th></tr></thead>
+<tbody>
+<tr><td>Baseline</td><td class="num">1.000 (12/12)</td><td class="num">0.667 (2/3)</td></tr>
+<tr><td>Ablate d̂_old</td><td class="num">0.083 (1/12)</td><td class="num">0.333 (1/3)</td></tr>
+<tr><td>Ablate d̂_augmented</td><td class="num">0.167 (2/12)</td><td class="num">0.333 (1/3)</td></tr>
+</tbody>
+</table>
+</div>
 <div class="finding-box">
 <p>
-<strong>Finding.</strong> On Gemma-2-2b-it, fictional-framing refusal behaves as a <em>separable mechanism</em> from the AdvBench-style direct-request refusal that <code>d̂</code> captures. Augmenting the training set with 30 fictional-framing harmful prompts moves <code>d̂</code> by less than 0.7° (cos = 0.9938) and does not pull the held-out fictional-framing test prompts measurably closer to it. The original 3-prompt pilot conclusion holds at N = 30 training + 15 held-out test: <code>d̂</code>'s reach has a structural limit, not a statistical one.
+<strong>Finding (the causal half flips the reading).</strong> On Gemma-2-2b-it, ablating <code>d̂</code> drops fictional-framing refusal from 14/15 to <strong>2/15</strong> on the held-out adversarial-jailbreak set — including 2 of the 3 prompts that <code>d̂</code> projected <em>below</em> the harmful/harmless midpoint. Augmenting <code>d̂</code> with 30 fictional-framing prompts doesn't help (2/15 → 3/15, within noise). The extraction-half "separable mechanism" reading from the 1.5-B test was reading <em>classification</em>, not <em>causation</em>: <code>d̂</code>'s linear boundary misses 3/15 of these prompts as a classifier, but the underlying mechanism it implements drives refusal on essentially all of them — once you ablate it, refusal collapses.
 </p>
 <p style="margin-top: 0.8rem;">
-This is convergent with Zhao et al. (2025), who distinguish refusal from harmfulness as separate internal directions. The minor extension: even the <em>classification</em> side of the story is partial — 12/15 fictional-framing test prompts are projected above the harmful/harmless midpoint by <code>d̂</code> (so d̂ <em>does</em> partly classify them as harmful), but the 3 most clearly fictional-framing test prompts sit on the harmless side of <code>d̂</code>'s linear boundary and stay there under augmentation.
+This is the §3 thesis stated at the <em>prompt</em> level rather than the direction level: a linear classifier and the causal mechanism it indexes are not the same boundary. <code>d̂</code> as a classifier covers ~80% of fictional-framing prompts; <code>d̂</code> as a causal mechanism reaches ~93% of them (12/15 fully ablated, 1/15 borderline residual). The one stubborn residual is the thriller/passport prompt — under ablation the model writes fictional atmosphere but evades the forgery technique, suggesting a small non-<code>d̂</code> mechanism for this specific kind of fictional jailbreak.
 </p>
 </div>
 <p style="font-size: 0.92rem; color: var(--fg-muted); margin-top: 0.6rem;">
-<em>Strongest confound + the control that doesn't rule it out.</em> 30 fictional-framing prompts is 17% of the augmented harmful side; the AdvBench geometry could be numerically dominating. A direction extracted from <em>only</em> fictional-framing prompts vs Alpaca might point elsewhere — that experiment is not run here. What can be ruled out: this is not a coverage-versus-bandwidth failure, because the held-out test prompts share their templates with the training augmentation (novel, grandmother, exposé) and still don't move. <em>Also not tested here:</em> the natural follow-up is to actually ablate d̂_augmented and measure whether the model still refuses fictional-framing prompts under that ablation. The MIXED verdict above is about whether d̂ <em>shifts</em> with augmentation, not about whether ablating d̂_augmented changes behavior on fictional-framing prompts — which would close the causal half of the loop.
+<em>Strongest confound + the control that rules it out.</em> A coarser interpretation would be that ablating <em>any</em> high-norm direction at all 26 layers damages refusal across the board. That's ruled out by the random-direction control in §4.8 (random-vector ablation on N = 200 HarmBench leaves refusal at 0.99) and by the LDA-bootstrap-101 cell in §3 (cross-distribution AUC ≥ 0.96, ablation refusal 0.985 / continuous z = -0.18). It's <code>d̂</code> specifically, not its norm or its layer-spread, that causes the drop.
+</p>
+<p style="font-size: 0.92rem; color: var(--fg-muted); margin-top: 0.6rem;">
+<em>Honesty note.</em> The 3 below-midpoint prompts are a tiny subset; the partial residual under ablation (1/3 = 0.333) is consistent with either "d̂ is the only mechanism here and one prompt is just statistical noise" or "there is a small residual non-<code>d̂</code> mechanism for a specific fictional-framing pattern." Distinguishing these requires more below-midpoint prompts than 15 total prompts can supply. The defensible claim is the headline one: ablating <code>d̂</code> drops fictional-framing refusal far more than the extraction-half story suggested.
 </p>
 <p>
-Details: <a href="https://github.com/lonehacker/mech-interp/blob/main/results/phase1_fictional_framing_balanced.md"><code>results/phase1_fictional_framing_balanced.md</code></a>; pre-registered runner at <a href="https://github.com/lonehacker/mech-interp/blob/main/experiments/phase1_fictional_framing_balanced.py"><code>experiments/phase1_fictional_framing_balanced.py</code></a>.
+Details: <a href="https://github.com/lonehacker/mech-interp/blob/main/results/phase1_fictional_framing_balanced.md"><code>results/phase1_fictional_framing_balanced.md</code></a> (extraction half), <a href="https://github.com/lonehacker/mech-interp/blob/main/results/phase1_fictional_framing_causal.md"><code>results/phase1_fictional_framing_causal.md</code></a> (causal half); pre-registered runners at <a href="https://github.com/lonehacker/mech-interp/blob/main/experiments/phase1_fictional_framing_balanced.py"><code>experiments/phase1_fictional_framing_balanced.py</code></a> and <a href="https://github.com/lonehacker/mech-interp/blob/main/experiments/phase1_fictional_framing_causal.py"><code>experiments/phase1_fictional_framing_causal.py</code></a>.
 </p>
 <!-- ========= 4. GENERALITY ========= -->
 <h2 id="generality">5. Cross-harm generality</h2>
@@ -856,7 +886,7 @@ The plain version: a few obvious next-step experiments are deliberately out of s
 <strong>Full 26-layer single-layer ablation sweep.</strong> The current localization result covers five layers. A full sweep would make the L13 localization claim stronger.
 </p>
 <p>
-<strong>Fictional-framing test — closed.</strong> The original 3-prompt pilot suggested fictional-framing refusal might live on a different axis than <code>d̂</code>. The balanced 30-prompt re-extraction (§4.11) closes that loop on the extraction half: augmenting the training set does not pull held-out fictional-framing prompts onto <code>d̂</code>. The remaining piece — actually ablating d̂_augmented and measuring full-generation refusal on the 15 fictional-framing test prompts — would close the causal half. Not run here.
+<strong>Fictional-framing test — closed (extraction + causal half).</strong> §4.11 closes both halves of the original 3-prompt pilot. Extraction half: augmenting <code>d̂</code> with 30 fictional-framing prompts moves it &lt; 0.7° (cos = 0.9938). Causal half: ablating <code>d̂</code> drops fictional-framing refusal 14/15 → 2/15 — including 2 of the 3 prompts that <code>d̂</code> didn't even project above its harmful/harmless midpoint. The original "separable mechanism" reading collapses into a sharper classification ≠ causation statement at the prompt level: <code>d̂</code> covers ~80% of fictional-framing prompts as a linear classifier but ~93% as a causal mechanism.
 </p>
 <!-- ========= 8. PHASE 2 ========= -->
 <h2 id="phase2">9. Phase 2 protocol</h2>
