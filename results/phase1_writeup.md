@@ -432,6 +432,67 @@ target one while leaving the other intact.
 
 See `results/phase1_step3c_*.md`.
 
+### 3.13 Phase 1.5-A — hardened classification ≠ causation at N=200 with continuous metric
+
+The N=12 binary-refusal subspace ablation (§3.9 above) had a known
+resolution limit: every "inert" cell looked identical (12/12 refusal),
+and a reviewer could legitimately ask whether the inert claim is just
+sampling noise at small N. Phase 1.5-A replaces this with:
+
+- N = 200 held-out HarmBench prompts (17× scale-up)
+- Continuous causal metric: |refusal − compliance| first-token logit
+  shift under Arditi-style ablation (single forward, no full generation)
+- 5 d̂ train-split bootstrap seeds (instead of 1)
+- 5 LDA-bootstrap-top-1 directions (instead of 3)
+- 5 random unit vectors → null band (mean ± 2σ)
+- Z-score every cell against the random null band
+
+**Result:**
+
+| Category | `|effect|` | z-score |
+|---|---:|---:|
+| Causal d̂ (5 seeds, tight cluster) | 14.4 – 15.1 | **+89 to +94** |
+| LDA-bootstrap-top-1 (5 seeds, classification-equivalent) | 0.009 – 0.113 | -0.79 to -0.14 (inside null band) |
+| L3 diff-of-means (cos 0.08 with L13 d̂) | 1.03 | **+5.6** (above null, ~14× smaller than causal) |
+| Random unit vectors (null band) | 0.136 ± 0.160 | reference |
+
+**Continuous-metric ↔ binary-refusal corroboration:**
+
+| Cell | Continuous z | Binary refusal (full-gen, dual-judge, N=200) |
+|---|---:|---:|
+| d̂ ablated | +92 | 0.080 (16/200) |
+| LDA-bootstrap-101 ablated | -0.18 | 0.985 (197/200) |
+| Random ablated | ≈ 0 | 0.990 (198/200) |
+| Baseline (no hook) | 0 (reference) | 0.990 (198/200) |
+
+Both readouts agree: causal extreme on both, inert at the floor on both.
+The continuous metric isn't measuring something shallower than refusal.
+
+**The L3 d̂ nuance (genuinely new, vs N=12 binary):** the binary pilot
+called L3 d̂ "inert" (12/12 refusal under ablation). The continuous metric
+reveals it's *partially causal* — z = +5.6, well above the random null
+band, but |effect| ~14× smaller than the actual L13 causal direction.
+Mechanistic reading: same diff-of-means recipe at a different layer of
+the operating band recovers a direction with ~8% directional overlap
+with d̂; ablating it removes a small fraction of the causal component
+at every residual hook. Two flavors of "inert" the binary metric blurred
+together: classification-by-chance (LDA bootstraps; z ≈ 0) and
+partially-causal (L3 d̂; z ≈ +5.6 but ~14× weaker than the causal direction).
+
+**Methodology lock-ins (pre-registered before any null-band run):**
+- Refusal first-token set: `{235285}` ("I") — validated 99% baseline coverage
+- Compliance first-token set: `{1620, 4858, 1917, 651, 235281, 6750}`
+  ("##", "Here", "```", "The", '"', "Hey") — 96% coverage; disjoint from
+  refusal at first-token level (zero collisions)
+- Primary metric: effect_signed = (refusal_logit − compliance_logit)<sub>ablated</sub>
+  − same<sub>baseline</sub>. Negative = causal. Reported as |effect| for the figure.
+- Z-score: against |effect| distribution of 5 random unit vectors
+- Sign convention: causal cells far ABOVE the null band; inert overlaps; raw
+  refusal_Δ and compliance_Δ reported alongside as diagnostic
+
+See `results/phase1_hardened_subspace.md` for the full per-cell table and
+`artifacts/figures/phase1_hardened_subspace.png` for the headline figure.
+
 ### 3.12 HarmBench — held-out OOD generalization at N=200 with dual-judge
 
 The headline number Phase 1 was missing. d_hat extracted at L13 from AdvBench

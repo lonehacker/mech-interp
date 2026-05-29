@@ -1,0 +1,240 @@
+{
+  "step": "phase1_hardened_subspace",
+  "model": "gemma-2-2b-it",
+  "extract_layer": 13,
+  "n_prompts": 200,
+  "refusal_token_ids": [
+    235285
+  ],
+  "compliance_token_ids": [
+    1620,
+    4858,
+    1917,
+    651,
+    235281,
+    6750
+  ],
+  "baseline": {
+    "refusal_logit_mean": 20.658241271972656,
+    "compliance_logit_mean": 7.686093807220459,
+    "contrast_mean": 12.972148895263672
+  },
+  "null_band": {
+    "n": 5,
+    "mean_abs_effect": 0.1357656266540289,
+    "std_abs_effect": 0.15984539207999093,
+    "two_sigma_upper": 0.4554564108140108
+  },
+  "cells": [
+    {
+      "name": "d_hat_seed_0",
+      "category": "causal_d_hat",
+      "metadata": {
+        "seed": 0
+      },
+      "effect_signed": -14.875585556030273,
+      "refusal_delta": -10.451933860778809,
+      "compliance_delta": 4.423652172088623,
+      "effect_abs": 14.875585556030273,
+      "z_score": 92.21297991499212
+    },
+    {
+      "name": "d_hat_seed_1",
+      "category": "causal_d_hat",
+      "metadata": {
+        "seed": 1
+      },
+      "effect_signed": -14.60708999633789,
+      "refusal_delta": -10.210253715515137,
+      "compliance_delta": 4.396835803985596,
+      "effect_abs": 14.60708999633789,
+      "z_score": 90.53325955396963
+    },
+    {
+      "name": "d_hat_seed_2",
+      "category": "causal_d_hat",
+      "metadata": {
+        "seed": 2
+      },
+      "effect_signed": -14.98013687133789,
+      "refusal_delta": -10.348105430603027,
+      "compliance_delta": 4.632031440734863,
+      "effect_abs": 14.98013687133789,
+      "z_score": 92.86705767067303
+    },
+    {
+      "name": "d_hat_seed_3",
+      "category": "causal_d_hat",
+      "metadata": {
+        "seed": 3
+      },
+      "effect_signed": -14.420663833618164,
+      "refusal_delta": -9.8837890625,
+      "compliance_delta": 4.536874771118164,
+      "effect_abs": 14.420663833618164,
+      "z_score": 89.36696905104144
+    },
+    {
+      "name": "d_hat_seed_4",
+      "category": "causal_d_hat",
+      "metadata": {
+        "seed": 4
+      },
+      "effect_signed": -15.081035614013672,
+      "refusal_delta": -10.85806655883789,
+      "compliance_delta": 4.222968578338623,
+      "effect_abs": 15.081035614013672,
+      "z_score": 93.4982847668241
+    },
+    {
+      "name": "LDA_top1_bs101",
+      "category": "inert_lda",
+      "metadata": {
+        "bootstrap_seed": 101
+      },
+      "effect_signed": -0.10634765774011612,
+      "refusal_delta": -0.020390624180436134,
+      "compliance_delta": 0.08595702797174454,
+      "effect_abs": 0.10634765774011612,
+      "z_score": -0.1840401436107162
+    },
+    {
+      "name": "LDA_top1_bs202",
+      "category": "inert_lda",
+      "metadata": {
+        "bootstrap_seed": 202
+      },
+      "effect_signed": 0.0627734363079071,
+      "refusal_delta": 0.08124999701976776,
+      "compliance_delta": 0.018476562574505806,
+      "effect_abs": 0.0627734363079071,
+      "z_score": -0.45664244302766344
+    },
+    {
+      "name": "LDA_top1_bs303",
+      "category": "inert_lda",
+      "metadata": {
+        "bootstrap_seed": 303
+      },
+      "effect_signed": -0.08980468660593033,
+      "refusal_delta": -0.014921874739229679,
+      "compliance_delta": 0.07488281279802322,
+      "effect_abs": 0.08980468660593033,
+      "z_score": -0.287533718989525
+    },
+    {
+      "name": "LDA_top1_bs404",
+      "category": "inert_lda",
+      "metadata": {
+        "bootstrap_seed": 404
+      },
+      "effect_signed": -0.009433593600988388,
+      "refusal_delta": 0.03523437678813934,
+      "compliance_delta": 0.04466797038912773,
+      "effect_abs": 0.009433593600988388,
+      "z_score": -0.7903389106757644
+    },
+    {
+      "name": "LDA_top1_bs505",
+      "category": "inert_lda",
+      "metadata": {
+        "bootstrap_seed": 505
+      },
+      "effect_signed": -0.11337890475988388,
+      "refusal_delta": 0.05363281071186066,
+      "compliance_delta": 0.16701172292232513,
+      "effect_abs": 0.11337890475988388,
+      "z_score": -0.14005234434873223
+    },
+    {
+      "name": "d_hat_L3",
+      "category": "inert_other_layer",
+      "metadata": {
+        "extract_layer": 3
+      },
+      "effect_signed": -1.0333789587020874,
+      "refusal_delta": -0.43861329555511475,
+      "compliance_delta": 0.5947656035423279,
+      "effect_abs": 1.0333789587020874,
+      "z_score": 5.615509589409175
+    },
+    {
+      "name": "random_seed_7",
+      "category": "random_null",
+      "metadata": {
+        "seed": 7
+      },
+      "effect_signed": -0.01474609412252903,
+      "refusal_delta": -0.05277343839406967,
+      "compliance_delta": -0.03802734240889549,
+      "effect_abs": 0.01474609412252903,
+      "z_score": -0.757103667216997
+    },
+    {
+      "name": "random_seed_17",
+      "category": "random_null",
+      "metadata": {
+        "seed": 17
+      },
+      "effect_signed": -0.014980468899011612,
+      "refusal_delta": 0.044218748807907104,
+      "compliance_delta": 0.059199217706918716,
+      "effect_abs": 0.014980468899011612,
+      "z_score": -0.7556374080184504
+    },
+    {
+      "name": "random_seed_27",
+      "category": "random_null",
+      "metadata": {
+        "seed": 27
+      },
+      "effect_signed": -0.14080077409744263,
+      "refusal_delta": -0.0032031249720603228,
+      "compliance_delta": 0.13759765028953552,
+      "effect_abs": 0.14080077409744263,
+      "z_score": 0.03150011006194046
+    },
+    {
+      "name": "random_seed_37",
+      "category": "random_null",
+      "metadata": {
+        "seed": 37
+      },
+      "effect_signed": 0.10429687798023224,
+      "refusal_delta": 0.1899999976158142,
+      "compliance_delta": 0.08570312708616257,
+      "effect_abs": 0.10429687798023224,
+      "z_score": -0.19686991451119742
+    },
+    {
+      "name": "random_seed_47",
+      "category": "random_null",
+      "metadata": {
+        "seed": 47
+      },
+      "effect_signed": -0.40400391817092896,
+      "refusal_delta": -0.09351562708616257,
+      "compliance_delta": 0.3104882836341858,
+      "effect_abs": 0.40400391817092896,
+      "z_score": 1.6781108796847042
+    }
+  ],
+  "template_boundary_diag": {
+    "last_5_token_ids": [
+      107,
+      108,
+      106,
+      2516,
+      108
+    ],
+    "last_5_decoded": [
+      "<end_of_turn>",
+      "\n",
+      "<start_of_turn>",
+      "model",
+      "\n"
+    ],
+    "top1_first_response_token_id": 4521,
+    "top1_first_response_token_decoded": "Hello"
+  }
+}

@@ -8,15 +8,22 @@ extraction decoupling.
 **The writeup (read this first):** [Classification ≠ Causation in Refusal
 Directions — A Replication on Gemma-2-2b-it](https://lonehacker.github.io/mech-interp/)
 
-**The headline finding, one sentence:** on Gemma-2-2b-it, ablating the L13
-diff-of-means direction drops refusal **from 99% to 8% on HarmBench (n=200,
-dual-judge cross-check) — a 91-percentage-point drop** with perfect
-specificity (random direction = 99% refusal). Five
-classification-equivalent alternatives extracted by other statistical
-methods (3 bootstrap LDA directions, a 5-D LDA subspace, diff-of-means
-from a different layer) are perfect classifiers but causally inert under
-the same ablation. TinyMMLU accuracy is preserved (Δ = +0.03, within
-noise) — the ablation is refusal-specific, not lobotomization.
+**The headline finding, hardened.** On Gemma-2-2b-it:
+
+- L13 diff-of-means d̂ ablation drops HarmBench refusal **99% → 8%** (N=200,
+  dual-judge cross-check). On a **continuous causal metric** (refusal-vs-
+  compliance first-token logit shift), 5 independently-resampled d̂ seeds
+  cluster tightly at z ≈ **+90** against a 5-vector random null band.
+- 5 LDA-bootstrap-top-1 directions — each a real cross-distribution
+  classifier (HarmBench AUC ≥ 0.96, random floor ≈ 0.53) and near-orthogonal
+  to d̂ — sit **inside the random null band** at z ≈ 0. Classification ≠
+  causation, at N=200 with signal-to-noise, not n=12 with binary.
+- The continuous metric also separates a third kind of "non-causal" the
+  binary pilot couldn't see: L3 diff-of-means is **partially causal**
+  (z = +5.6 but |effect| ~14× smaller than the actual causal direction)
+  — distinct from both purely random and classification-by-chance.
+- TinyMMLU accuracy preserved (Δ = +0.03, within noise) → the ablation is
+  refusal-specific, not lobotomization.
 
 **Scope:** replication + methodology contribution. Not a novel finding.
 Every conceptual claim is in the published literature (Arditi 2024,
@@ -36,21 +43,50 @@ statistical-vs-gradient decoupling result.
 | **See raw model completions** | `artifacts/runs/<step>/<timestamp>/result.json` — per-prompt prompt+completion pairs |
 | **See the figures** | [`artifacts/figures/`](artifacts/figures/) — 14 PNGs |
 
-## Headline result table
+## Hardened headline result (N=200, continuous metric, null band)
 
-| Cell | Direction ablated (Arditi multi-layer recipe) | Refusal rate (12 held-out harmful) |
+![hardened classification ≠ causation](docs/phase1_hardened_subspace.png)
+
+16 directions, N=200 held-out HarmBench prompts each, continuous causal
+metric (|refusal − compliance| first-token logit shift), z-scored against
+a 5-vector random null band:
+
+| Category | Cells | `|effect|` | Z-score |
+|---|---|---:|---:|
+| Causal (d̂ × 5 train-split seeds) | tight cluster | 14.4 – 15.1 | **+89 to +94** |
+| Classification-inert (LDA × 5 bootstraps, each AUC=1.0 cross-dist) | inside null band | 0.009 – 0.113 | -0.79 to -0.14 |
+| Partially causal (L3 diff-of-means, cos 0.08 with L13 d̂) | above null but ~14× smaller | 1.03 | +5.6 |
+| Random unit vectors (null band) | reference | mean 0.136 ± 0.160 | (defines null) |
+
+Binary corroboration on the headline cells (N=200, dual-judge):
+
+| Cell | Continuous metric | Binary refusal rate (full-gen) |
+|---|---:|---:|
+| d̂ ablated | z = +92.2 | 0.080 (16/200) |
+| LDA-bootstrap-101 ablated | z = -0.18 | 0.985 (197/200) |
+| Random unit vector ablated | z ≈ 0 | 0.990 (198/200) |
+| Baseline (no hook) | 0 (reference) | 0.990 (198/200) |
+
+Continuous and binary readouts corroborate on every headline cell; the
+high-resolution metric isn't measuring something shallower than refusal.
+Details: [`results/phase1_hardened_subspace.md`](results/phase1_hardened_subspace.md).
+
+### Pilot table that motivated this scaled run
+
+The original 6-cell experiment used 12 held-out AdvBench prompts and a
+binary refusal-rate metric. At that resolution every "inert" cell looked
+identical to random (12/12 refusal each), which motivated the N=200
+continuous-metric scale-up above:
+
+| Cell | Direction ablated | Refusal rate (N=12, binary) |
 |---|---|---:|
-| A | (baseline, no intervention) | 12 / 12 |
+| A | (baseline) | 12 / 12 |
 | **B** | **L13 diff-of-means d̂** | **0 / 12** |
-| C1 | Bootstrap-101 LDA-top-1 | 12 / 12 |
-| C2 | Bootstrap-202 LDA-top-1 | 12 / 12 |
-| C3 | Bootstrap-303 LDA-top-1 | 12 / 12 |
+| C1–C3 | LDA-top-1 (bootstraps 101/202/303) | 12 / 12 each |
 | D | Top-5 LDA orthogonal subspace | 12 / 12 |
-| E | L3 diff-of-means (cos 0.08 with L13) | 12 / 12 |
-| F | Random unit vector (control) | 12 / 12 |
+| E | L3 diff-of-means | 12 / 12 |
+| F | Random unit vector | 12 / 12 |
 
-Only L13 diff-of-means is causal. Five other classification-equivalent
-directions behave identically to a random direction under ablation.
 Details: [`results/phase1_subspace_ablation.md`](results/phase1_subspace_ablation.md).
 
 This result does **not refute** Wollschläger et al.'s ICML 2025

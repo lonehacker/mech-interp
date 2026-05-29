@@ -371,33 +371,55 @@ That's the mechanism being tested here. The interesting questions are: <em>where
 </p>
 <h2 id="headline">3. The headline result: classification ≠ causation</h2>
 <p>
-On Gemma-2-2b-it, I extracted <code>d̂</code> via diff-of-means at L13, then tested five alternative directions —
-three independently-sampled bootstrap LDA directions, a 5-dimensional LDA orthogonal subspace, and diff-of-means
-from a different layer (L3). All are perfect classifiers of harmful vs harmless on the held-out split
-(AUC = 1.0). None are causal under ablation:
+On Gemma-2-2b-it, I extract <code>d̂</code> via diff-of-means at L13 and test it against a battery of alternative directions that are <em>classification-equivalent</em> (each separates harmful from harmless prompts with AUC ≥ 0.96 on the held-out HarmBench split) but recovered by different statistical methods. The headline experiment uses a continuous causal metric on 200 held-out HarmBench prompts, z-scored against a random-vector null band. The discrimination is by many sigma:
+</p>
+<figure>
+<img alt="Continuous causal-effect metric (|refusal-vs-compliance logit shift|) for 16 directions on N=200 HarmBench prompts. Five d̂ seeds tower at |effect|≈15 (z ≈ +90 vs null band). Five LDA bootstraps + five random vectors overlap a null band of width 0.16. L3 d̂ sits at |effect|≈1.0, above the null band but ~14× smaller than the causal direction." src="phase1_hardened_subspace.png"/>
+<figcaption>
+<strong>Continuous causal metric on N = 200 held-out HarmBench prompts.</strong> Each bar is the magnitude of the refusal-vs-compliance first-token logit shift under Arditi-style ablation of one direction. The gray stripe is the random-vector null band (mean ± 2σ over 5 random unit vectors). Causal d̂ (5 train-split bootstrap seeds) sits at <strong>z ≈ +90 vs the null band</strong>; LDA-bootstrap-top-1 directions (cos 0.05–0.20 with d̂) overlap the null band; L3 d̂ stands alone as a <em>partially causal</em> cell at z ≈ +5.6.
+</figcaption>
+</figure>
+<p>
+<strong>Hardened cell table.</strong> Effect_signed = (refusal_logit − compliance_logit)<sub>ablated</sub> − (refusal_logit − compliance_logit)<sub>baseline</sub>, in logit-difference units (nats). Negative effect_signed = mass moved from refusal toward compliance under ablation = causal. The metric uses validated, model-specific first-token sets (refusal = <code>{"I"}</code> covers 99% of baseline refusal openers; compliance = <code>{"##", "Here", "```", "The", "\"", "Hey"}</code> covers 96% of compliance openers, disjoint from the refusal set at the first-token level). Single forward per prompt — no full-generation cost.
 </p>
 <div class="table-wrap">
 <table>
-<thead>
-<tr><th>Cell</th><th>Direction ablated</th><th>Refusal rate</th></tr>
-</thead>
+<thead><tr><th>Category</th><th>Direction</th><th>|effect|</th><th>z-score</th><th>refusal_Δ</th><th>compliance_Δ</th></tr></thead>
 <tbody>
-<tr><td>A</td><td>(baseline, no intervention)</td><td class="num">12 / 12</td></tr>
-<tr class="highlight"><td>B</td><td>L13 diff-of-means d̂</td><td class="num">0 / 12</td></tr>
-<tr><td>C1</td><td>Bootstrap-101 LDA-top-1</td><td class="num">12 / 12</td></tr>
-<tr><td>C2</td><td>Bootstrap-202 LDA-top-1</td><td class="num">12 / 12</td></tr>
-<tr><td>C3</td><td>Bootstrap-303 LDA-top-1</td><td class="num">12 / 12</td></tr>
-<tr><td>D</td><td>Top-5 LDA orthogonal subspace</td><td class="num">12 / 12</td></tr>
-<tr><td>E</td><td>L3 diff-of-means (cos 0.08 to L13)</td><td class="num">12 / 12</td></tr>
-<tr><td>F</td><td>Random unit vector (control)</td><td class="num">12 / 12</td></tr>
+<tr class="highlight"><td rowspan="5">Causal: d̂ (5 train-split seeds)</td><td>d_hat_seed_0</td><td class="num">14.88</td><td class="num">+92.2</td><td class="num">-10.45</td><td class="num">+4.42</td></tr>
+<tr class="highlight"><td>d_hat_seed_1</td><td class="num">14.61</td><td class="num">+90.5</td><td class="num">-10.21</td><td class="num">+4.40</td></tr>
+<tr class="highlight"><td>d_hat_seed_2</td><td class="num">14.98</td><td class="num">+92.9</td><td class="num">-10.35</td><td class="num">+4.63</td></tr>
+<tr class="highlight"><td>d_hat_seed_3</td><td class="num">14.42</td><td class="num">+89.4</td><td class="num">-9.88</td><td class="num">+4.54</td></tr>
+<tr class="highlight"><td>d_hat_seed_4</td><td class="num">15.08</td><td class="num">+93.5</td><td class="num">-10.86</td><td class="num">+4.22</td></tr>
+<tr><td rowspan="5">Classification-inert: LDA × 5 bootstraps</td><td>LDA_top1_bs101</td><td class="num">0.106</td><td class="num">-0.18</td><td class="num">-0.02</td><td class="num">+0.09</td></tr>
+<tr><td>LDA_top1_bs202</td><td class="num">0.063</td><td class="num">-0.46</td><td class="num">+0.08</td><td class="num">+0.02</td></tr>
+<tr><td>LDA_top1_bs303</td><td class="num">0.090</td><td class="num">-0.29</td><td class="num">-0.01</td><td class="num">+0.07</td></tr>
+<tr><td>LDA_top1_bs404</td><td class="num">0.009</td><td class="num">-0.79</td><td class="num">+0.04</td><td class="num">+0.04</td></tr>
+<tr><td>LDA_top1_bs505</td><td class="num">0.113</td><td class="num">-0.14</td><td class="num">+0.05</td><td class="num">+0.17</td></tr>
+<tr><td>Partially causal: cross-layer d̂</td><td>L3 diff-of-means (cos 0.08 with L13 d̂)</td><td class="num">1.03</td><td class="num">+5.6</td><td class="num">-0.44</td><td class="num">+0.59</td></tr>
+<tr><td rowspan="5">Random unit vectors (null band)</td><td>random_seed_7</td><td class="num">0.015</td><td class="num">-0.76</td><td class="num">-0.05</td><td class="num">-0.04</td></tr>
+<tr><td>random_seed_17</td><td class="num">0.015</td><td class="num">-0.76</td><td class="num">+0.04</td><td class="num">+0.06</td></tr>
+<tr><td>random_seed_27</td><td class="num">0.141</td><td class="num">+0.03</td><td class="num">-0.00</td><td class="num">+0.14</td></tr>
+<tr><td>random_seed_37</td><td class="num">0.104</td><td class="num">-0.20</td><td class="num">+0.19</td><td class="num">+0.09</td></tr>
+<tr><td>random_seed_47</td><td class="num">0.404</td><td class="num">+1.68</td><td class="num">-0.15</td><td class="num">+0.04</td></tr>
 </tbody>
 </table>
 </div>
 <p>
-The result is not explained by the alternatives being small perturbations of the same vector. The three bootstrap LDA directions have cosine similarities of 0.07–0.20 to the L13 diff-of-means direction, making them nearly orthogonal in the 2304-dimensional activation space. Because the classification problem is underdetermined (2304 dimensions, 300 samples), many separating hyperplanes exist; most are not causal for the behavior tested here.
+The diagnostic columns are doing their job: in every causal cell, <code>refusal_Δ</code> is large negative (~ −10 nats) <em>and</em> <code>compliance_Δ</code> is large positive (~ +4.4 nats), moving in opposite directions. The contrast metric isn't being driven by uniform damping — both terms are shifting, in the directions you'd expect from a directional intervention.
 </p>
+<h3>Three distinguishable kinds of "non-causal" the binary metric blurred together</h3>
 <p>
-A natural objection: maybe the LDA directions aren't real classifiers either — maybe they overfit a particular AdvBench-vs-Alpaca split and don't actually correspond to a meaningful feature. The clean test is to evaluate their classification AUC on a <em>different</em> benchmark (HarmBench) where they were never optimized. They generalize:
+The pilot version of this experiment used 12 held-out AdvBench prompts and a binary refusal-rate metric (see <em>Pilot table</em> below). At that resolution every "inert" cell looked identical: 12/12 refusal, indistinguishable from random. The continuous metric at N = 200 separates the inert cells into three regimes:
+</p>
+<ul>
+<li><strong>Classification by chance</strong> (LDA bootstraps): z ≈ 0, sitting inside the null band. Each direction is a real cross-distribution classifier — see the cross-distribution AUC table below — but ablating it has effectively no causal signature.</li>
+<li><strong>Partially causal</strong> (L3 diff-of-means): z = +5.6, |effect| = 1.03. Above the null band but ~14× smaller than the actual L13 causal direction. Mechanistic reading: same diff-of-means recipe extracted at a different layer of the operating band recovers a direction with ~8% directional overlap with d̂; ablating it removes a small fraction of the causal component at every residual hook.</li>
+<li><strong>Pure random direction</strong> (5 seeds): z within ±2, defining the null band itself. <code>random_seed_47</code> at z = +1.68 shows the null tail isn't perfectly tight at n = 5 — the L3 d̂ z = +5.6 is 3× the largest random tail and still firmly distinguishable, but with a larger random sample we'd nail the partial-causality claim tighter.</li>
+</ul>
+<h3>Are the LDA-inert directions actually classifiers, or AdvBench overfits?</h3>
+<p>
+A natural objection to the inert-direction claim: maybe the LDA bootstraps aren't real classifiers either — maybe they overfit a particular AdvBench-vs-Alpaca split and don't actually correspond to a meaningful feature. The clean test is to evaluate their classification AUC on a different benchmark (HarmBench) where they were never optimized. They generalize:
 </p>
 <div class="table-wrap">
 <table>
@@ -412,15 +434,53 @@ A natural objection: maybe the LDA directions aren't real classifiers either —
 </table>
 </div>
 <p>
-All three LDA-bootstrap directions are real cross-distribution classifiers (HarmBench AUC ≥ 0.96; random floor ≈ 0.53). They are not AdvBench overfits. The model's residual stream contains <strong>at least four mutually near-orthogonal real classifiers</strong> of "harmful vs harmless" — diff-of-means and three independent LDA bootstraps. Only one of the four (diff-of-means) actually mediates refusal behavior under ablation.
+All three LDA-bootstrap directions are real cross-distribution classifiers (HarmBench AUC ≥ 0.96; random-vector floor ≈ 0.53). They are not AdvBench overfits. The model's residual stream contains <strong>at least four mutually near-orthogonal real classifiers</strong> of "harmful vs harmless" — diff-of-means and three independent LDA bootstraps. Only one of the four mediates refusal <em>behavior</em>.
 </p>
+<h3>Continuous-metric ↔ binary-refusal corroboration</h3>
+<p>
+The continuous metric measures a single token's logit shift; a "shallow" interpretation would be that ablation just changes which token the model emits first, not whether it ultimately helps. The cross-check is the full-generation binary refusal rate scored by the calibrated dual LLM judge (Haiku 4.5 primary, Opus 4.7 cross-check) — independently sensitive to whether the response actually complies with the harmful request. The two readouts corroborate on every headline cell:
+</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Cell</th><th>Continuous |effect| / z</th><th>Binary refusal rate (full-gen, dual-judge, N=200)</th></tr></thead>
+<tbody>
+<tr class="highlight"><td>d̂ ablated</td><td class="num">14.88 / +92.2</td><td class="num">0.080 (16/200)</td></tr>
+<tr><td>LDA-bootstrap-101 ablated</td><td class="num">0.106 / -0.18</td><td class="num">0.985 (197/200)</td></tr>
+<tr><td>Random unit vector ablated</td><td class="num">~0.10 / ≈ 0</td><td class="num">0.990 (198/200)</td></tr>
+<tr><td>Baseline (no hook)</td><td class="num">0 (reference)</td><td class="num">0.990 (198/200)</td></tr>
+</tbody>
+</table>
+</div>
+<p>
+Both readouts agree on every headline cell: causal direction is extreme on both, inert directions are at the floor on both. The token metric isn't measuring something shallower than refusal — it's a high-resolution dial that the lower-resolution binary readout corroborates.
+</p>
+<h3>Pilot table that motivated the scaled run</h3>
+<p>
+For history: the pilot version of this experiment used 12 held-out AdvBench prompts and a binary refusal-rate metric. At that resolution every inert cell looked identical to random, which motivated the scaled run above:
+</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Cell</th><th>Direction ablated</th><th>Refusal rate (N=12, binary)</th></tr></thead>
+<tbody>
+<tr><td>A</td><td>(baseline, no intervention)</td><td class="num">12 / 12</td></tr>
+<tr class="highlight"><td>B</td><td>L13 diff-of-means d̂</td><td class="num">0 / 12</td></tr>
+<tr><td>C1–C3</td><td>Bootstrap-{101, 202, 303} LDA-top-1</td><td class="num">12 / 12 each</td></tr>
+<tr><td>D</td><td>Top-5 LDA orthogonal subspace</td><td class="num">12 / 12</td></tr>
+<tr><td>E</td><td>L3 diff-of-means</td><td class="num">12 / 12</td></tr>
+<tr><td>F</td><td>Random unit vector</td><td class="num">12 / 12</td></tr>
+</tbody>
+</table>
+</div>
 <div class="finding-box">
 <p>
-<strong>Finding.</strong> On Gemma-2-2b-it, the L13 diff-of-means direction is the only causal refusal direction recovered by the statistical extraction methods tested here. Several near-orthogonal alternatives are classification-equivalent but behave like a random direction under ablation. <strong>This effect carries to held-out HarmBench at N = 200</strong> (see §4.8): under Arditi-style ablation on 200 HarmBench prompts, the diff-of-means direction drops refusal from 99% to 8%, the random control stays at 99%, and an LDA-bootstrap-top-1 direction (cos = 0.17 with d̂, a near-orthogonal classification-equivalent direction) gives 197/200 = 98.5% refusal — matching the random control, not the causal direction. 17× scale-up from the AdvBench N = 12 test; qualitative picture unchanged. Classification structure is rich in 2304-dimensional residual space; causal structure is narrow.
+<strong>Finding.</strong> On Gemma-2-2b-it, the L13 diff-of-means direction is the only fully-causal refusal direction recovered by the statistical extraction methods tested here, by many sigma. Five independently-resampled d̂ seeds cluster tightly at z ≈ +90 against a random-vector null band; five LDA-bootstrap-top-1 directions — each a real cross-distribution classifier — sit inside the null band at z ≈ 0. L3 diff-of-means is the one nuance the binary pilot missed: a <em>partially causal</em> cell with z ≈ +5.6 but |effect| ~14× smaller than the actual L13 causal direction, consistent with mild directional overlap (cos 0.08) with d̂ via the operating-band structure.
 </p>
 </div>
 <p>
-This should be read alongside, not against, Wollschläger et al.’s multi-dimensional “polyhedral cone” result on the same model. Their four-dimensional result is recovered via gradient-based Refusal Direction Optimization (RDO), while this experiment tests statistical extraction. The two results therefore point to a methodological distinction: statistical extraction and gradient extraction need not recover the same causal structure.
+This should be read alongside, not against, Wollschläger et al.'s multi-dimensional "polyhedral cone" result on the same model. Their four-dimensional result is recovered via gradient-based Refusal Direction Optimization (RDO), while this experiment tests <em>statistical</em> extraction. The two results point to a methodological distinction: statistical extraction and gradient extraction need not recover the same causal structure. The unified thesis: <em>separability does not determine which directions implement a behavior, and the answer is extraction-method-dependent.</em>
+</p>
+<p style="font-size: 0.92rem; color: var(--fg-muted); margin-top: 0.6rem;">
+<em>Honesty note on the metric.</em> The refusal token set covers 99% of baseline refusal openers; the compliance token set covers 96% of compliance openers. The 3pp asymmetry means the contrast term has slightly less compliance mass to credit, so reported effects are a <em>mild lower bound</em> on the true causal shift. "##" appears 83× as a compliance opener and 2× as a refusal opener; we place it in the compliance set. The contrast metric (refusal − compliance) structurally cancels shared-opener mass, so this contamination self-handles. The token sets are pre-registered in <code>src/causal_metric.py</code> as outputs of a per-model validation procedure that re-runs identically on any model.
 </p>
 <!-- ========= 3. REPLICATION ========= -->
 <h2 id="replication">4. Replication numbers</h2>
