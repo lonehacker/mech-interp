@@ -79,7 +79,7 @@ from pathlib import Path
 
 import torch
 
-from src.model import ModelBundle, format_prompt, tokenize_prompt
+from src.model import ModelBundle, format_prompt, format_prompt_for_bundle, tokenize_prompt
 
 
 # Validated first-token IDs for Gemma-2-2b-it (see module docstring).
@@ -401,14 +401,17 @@ def verify_template_boundary(bundle: ModelBundle, sample_prompt: str = "Hello") 
     """Sanity check: confirm the templated prompt's last token is at the
     boundary where the model's next prediction IS the first response token.
 
-    The Gemma chat template ends with `<start_of_turn>model\\n`. The last
-    tokenized position should be one of the tokens of that suffix. If the
-    template instead trails into something else (e.g., a stray newline),
+    Each model's chat template has its own end-of-template suffix — Gemma
+    is `<start_of_turn>model\\n`, Qwen ChatML is
+    `<|im_start|>assistant\\n`. The last tokenized position should be one
+    of the tokens of whichever suffix the bundle's tokenizer emits. If
+    the template trails into something else (e.g., a stray newline),
     `logits[:, -1, :]` predicts the wrong thing.
 
-    Returns a diagnostic dict; raises if the boundary looks wrong.
+    Returns a diagnostic dict — the caller eyeballs `last_5_decoded` to
+    confirm the suffix looks right for the model.
     """
-    templated = format_prompt(sample_prompt)
+    templated = format_prompt_for_bundle(bundle, sample_prompt)
     ids = tokenize_prompt(bundle, templated)
     last_5 = ids[0, -5:].tolist()
     decoded = [bundle.model.tokenizer.decode([t]) for t in last_5]
@@ -462,7 +465,7 @@ def causal_effect_under_hook(
 
     with hook_ctx:
         for raw_prompt in prompts:
-            templated = format_prompt(raw_prompt)
+            templated = format_prompt_for_bundle(bundle, raw_prompt)
             ids = tokenize_prompt(bundle, templated).to(device)
             logits = bundle.model(ids, return_type="logits")  # [1, seq, vocab]
             last_logits = logits[0, -1, :]  # [vocab] — first-response-token distribution

@@ -522,13 +522,13 @@ I compute the diff-of-means direction at each of the 26 layers and measure harmf
 <strong>Figure 1.</strong> LOO-CV AUC of the diff-of-means direction across all 26 layers. Peak at L23 (AUC 0.999); plateau L7–L25. The shuffled-label control is near chance. L13 is used for steering because it lies in the plateau and supports comparison with Arditi-style work.
 </figcaption>
 </figure>
-<h3>4.3 Steering (causal test)</h3>
+<h3>4.3 Steering (causal test — small-N proof-of-concept)</h3>
 <p><em>Question: does ablating <code>d̂</code> change model behavior, or is it only a statistical correlate?</em></p>
 <p>
-The core causal test extracts <code>d̂</code> from the 138-prompt training split at L13, ablates that direction during generation, and evaluates behavior on 12 held-out harmful prompts. I score outputs with both a substring matcher and a calibrated LLM judge.
+This is the original N = 12 pilot that first established the causal effect; <strong>§4.8 scales it to N = 200 with dual-judge scoring on a different benchmark (HarmBench), where the same ablation drops refusal 99% → 8% — that is the headline number, this section is early confirmation.</strong> The pilot extracts <code>d̂</code> from the 138-prompt training split at L13, ablates that direction during generation, and evaluates behavior on 12 held-out harmful prompts, scored with both a substring matcher and a calibrated LLM judge.
 </p>
 <p>
-Ablation reduces refusal from 100% to 17% on this held-out set. A random-direction ablation has no measurable effect, with refusal remaining at 100%. The direction is also bidirectional: adding it to harmless prompts induces refusal in the tested setting.
+Ablation reduces refusal from 100% to 17% on this small held-out set. A random-direction ablation has no measurable effect, with refusal remaining at 100%. The direction is also bidirectional: adding it to harmless prompts induces refusal in the tested setting. The 0.17 reads as small-N early confirmation; the 0.08 at N = 200 in §4.8 is the load-bearing number.
 </p>
 <div class="table-wrap">
 <table>
@@ -655,7 +655,7 @@ The subspace-ablation experiment (§3) showed at N = 12 on AdvBench that statist
 </table>
 </div>
 <p>
-The LDA-bootstrap direction is a perfect classifier on the AdvBench split (AUC = 1.0) and is near-orthogonal to d̂. Under Arditi-style ablation on a 17× larger held-out evaluation set on a different benchmark, it behaves <em>identically to a random unit vector</em>. The classification-vs-causation gap from N = 12 (§3) reproduces at N = 200 on a different benchmark.
+The LDA-bootstrap direction is a perfect classifier on the AdvBench split (AUC = 1.0) and is near-orthogonal to d̂. Under Arditi-style ablation on a 17× larger held-out evaluation set on a different benchmark, it behaves <em>identically to a random unit vector</em>. The classification-vs-causation gap from N = 12 (§3) reproduces at N = 200 on a different benchmark. <strong>§4.11 makes the same point at the prompt level rather than the direction level:</strong> on fictional-framing prompts <code>d̂</code> classifies as harmless, ablating <code>d̂</code> still collapses refusal — one thesis reinforced from two angles, with this section the direction-level cut and §4.11 the prompt-level cut.
 </p>
 <div class="finding-box">
 <p>
@@ -715,16 +715,25 @@ A per-layer AUC sweep for d̂_harmbench shows the peak is L11 (AUC = 0.9997), es
 <strong>Finding.</strong> The refusal direction on Gemma-2-2b-it is <strong>essentially invariant to the harmful-prompt benchmark used for extraction</strong>. AdvBench-derived d̂ and HarmBench-derived d̂ are 95% parallel in 2304-dimensional residual space, both classify both benchmarks at AUC ≈ 1.0, and both peak in the same mid-network layer band. The cross-extraction question collapses cleanly: there is one direction, not two. (The behavioral cross-ablation test — d̂_harmbench ablation on AdvBench prompts and vice versa — was scoped but skipped, because the cosine result already determines its answer: ablating one direction ≈ ablating the other.)
 </p>
 </div>
-<h3>4.11 Balanced fictional-framing test (closing the open-loop prediction)</h3>
+<h3>4.11 Fictional-framing: the classifier boundary is not the causal boundary</h3>
 <p>
-The plain version. The pilot in §3 (and the earlier <code>phase1_step3c</code> writeup) found that a handful of fictional-framing jailbreaks — "for my novel," "my late grandmother used to tell me," "for an exposé" — projected <em>low</em> on <code>d̂</code> yet still got refused by the model. With only 3 such prompts in that pilot, the conclusion was suggestive but statistically weak. Closing the loop here: re-extract <code>d̂</code> with 30 fictional-framing harmful prompts mixed in, and check whether held-out fictional-framing prompts move closer to the refusal axis.
+The plain version. On Gemma-2-2b-it, ablating <code>d̂</code> collapses refusal on fictional-framing jailbreaks from 14/15 to 2/15 — <em>including 2 of the 3 prompts that <code>d̂</code>'s linear classifier doesn't even project above its harmful/harmless midpoint.</em> The direction that classifies the prompt as harmless still causally drives its refusal. This is the §3 thesis stated at the prompt level rather than the direction level: a linear classifier and the causal mechanism it indexes are not the same boundary.
 </p>
+<div class="finding-box">
+<p>
+<strong>Finding (closes the open-loop prediction from earlier work).</strong> 15 held-out fictional-framing jailbreaks from <code>data/affect-test.jsonl</code> — novel/thriller, late-grandmother bedtime story, investigative exposé, academic thesis, roleplay/DAN, historical/screenplay templates. Baseline refusal 14/15. Under Arditi-style ablation of <code>d̂</code>, refusal collapses to <strong>2/15</strong>; under ablation of an augmented <code>d̂</code> re-extracted with 30 fictional-framing prompts added to training, 3/15 (within judge noise). The collapse <em>includes 2 of the 3 prompts that <code>d̂</code> projects below the harmful/harmless midpoint</em> — so <code>d̂</code> reaches them as a causal mechanism even where its classifier boundary misses them.
+</p>
+<p style="margin-top: 0.8rem;">
+<code>d̂</code> as a <em>linear classifier</em> covers ~80% of these prompts (12/15 above midpoint). <code>d̂</code> as a <em>causal mechanism</em> reaches ~93% of them (12/15 fully ablated under either extraction, 1/15 borderline residual). The single stubborn residual is the thriller/passport prompt — under ablation the model writes fictional atmosphere but still evades the forgery technique, suggesting a small non-<code>d̂</code> mechanism specific to that evasion pattern. The cross-link is direct: §4.8 makes this same point at the <em>direction</em> level (LDA bootstraps are perfect classifiers but causally inert at N = 200); here it appears at the <em>prompt</em> level (the linear boundary misses prompts the mechanism nonetheless drives).
+</p>
+</div>
 <p class="q"><em>Question: is fictional-framing refusal captured by the same axis as AdvBench refusal, just with a coverage gap? Or is it a separable mechanism the axis doesn't reach?</em></p>
 <p>
-<strong>Setup.</strong> Build a 30-prompt fictional-framing training set across 6 templates × 5 behaviors each: novel/thriller, late-grandmother bedtime story, investigative exposé, academic thesis, roleplay/DAN, historical/screenplay. Add it to the existing 150 AdvBench harmful set (harmful side = 180 prompts, 17% fictional-framing) and keep the 150 Alpaca harmless side unchanged. Hold out 15 <code>adversarial_jailbreak</code> prompts from <code>data/affect-test.jsonl</code> as the test set — never seen by either extraction. These 15 include the 3 originals that motivated this test.
+<strong>Setup.</strong> 30-prompt fictional-framing training set across 6 templates × 5 behaviors (novel/thriller, late-grandmother bedtime story, investigative exposé, academic thesis, roleplay/DAN, historical/screenplay). Added to the existing 150 AdvBench harmful set (harmful side = 180 prompts, 17% fictional-framing); 150 Alpaca harmless side unchanged. Hold out 15 <code>adversarial_jailbreak</code> prompts as the test set, never seen by either extraction.
 </p>
+<h4 style="font-family: var(--sans); font-size: 0.95rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted); margin-top: 2rem; margin-bottom: 0.6rem;">Extraction half — does augmenting the training set move the direction?</h4>
 <p>
-<strong>Pre-registered prediction.</strong> If fictional-framing refusal lives on the same axis (unitary mechanism with coverage gap), then re-extraction should: (A) preserve direction alignment, cos(d̂_old, d̂_augmented) ≥ 0.85, AND (B) pull the 15 held-out fictional-framing test prompts measurably onto the axis, normalized projection rise ≥ 0.10 of natural scale. If either fails — separable mechanism.
+A pre-registered prediction (filed before any run): if fictional-framing refusal lives on the same axis with a coverage gap, re-extraction would both (A) preserve direction alignment, cos ≥ 0.85, and (B) pull the held-out fictional-framing prompts measurably onto the axis, projection rise ≥ 0.10 of natural scale. (A) passes by a wide margin; <em>(B) fails</em>. That failure is the methodological signal, not a disappointment: the classifier boundary and the causal boundary are different boundaries, and re-fitting the classifier with more in-distribution data leaves the causal mechanism unchanged because the mechanism was already doing the work.
 </p>
 <div class="table-wrap">
 <table>
@@ -741,11 +750,11 @@ The plain version. The pilot in §3 (and the earlier <code>phase1_step3c</code> 
 </table>
 </div>
 <p>
-<strong>Verdict: MIXED.</strong> Prediction (A) passes by a wide margin — the augmented direction is 99.4% parallel to the original despite adding 30 fictional-framing prompts. Prediction (B) fails — the held-out fictional-framing prompts barely move on the axis (mean rise 2.7% of natural scale, ceiling 8.8%, well below the 10% threshold). The same 3 prompts that remained below the harmful/harmless midpoint under d̂_old remain below it under d̂_augmented: the grandmother/methamphetamine prompt (projection 35.5 → 44.1, still below midpoint ≈ 58), the thriller/passport prompt (32.0 → 39.8), and the exposé/insurance-fraud prompt (50.7 → 54.0). Adding more fictional-framing data to the training set <em>does not</em> recruit fictional-framing prompts onto <code>d̂</code>.
+The augmented direction is 99.4% parallel to the original despite adding 30 fictional-framing prompts (less than 0.7° rotation). The held-out fictional-framing prompts barely move on the axis (mean rise 2.7% of natural scale, ceiling 8.8%, below the 10% threshold). The same 3 prompts that sat below the harmful/harmless midpoint under <code>d̂_old</code> remain below it under <code>d̂_augmented</code>. Adding more fictional-framing data to the training set does not recruit fictional-framing prompts onto <code>d̂</code> as a classifier.
 </p>
-<h4 style="font-family: var(--sans); font-size: 0.95rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted); margin-top: 2rem; margin-bottom: 0.6rem;">Causal half — does ablating d̂_augmented stop refusal on fictional-framing prompts?</h4>
+<h4 style="font-family: var(--sans); font-size: 0.95rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted); margin-top: 2rem; margin-bottom: 0.6rem;">Causal half — does ablating d̂ stop refusal on fictional-framing prompts?</h4>
 <p>
-The extraction half above tells us the <em>direction</em> doesn't shift with augmentation. It doesn't tell us whether ablating that direction <em>causally</em> stops refusal on the held-out fictional-framing prompts. Generate completions on the same 15 prompts under three conditions and dual-judge:
+The extraction half tells us the <em>direction</em> doesn't shift with augmentation. It doesn't tell us whether ablating that direction <em>causally</em> stops refusal on the held-out fictional-framing prompts. Generate completions on the same 15 prompts under three conditions and dual-judge:
 </p>
 <div class="table-wrap">
 <table>
@@ -770,14 +779,9 @@ The extraction half above tells us the <em>direction</em> doesn't shift with aug
 </tbody>
 </table>
 </div>
-<div class="finding-box">
 <p>
-<strong>Finding (the causal half flips the reading).</strong> On Gemma-2-2b-it, ablating <code>d̂</code> drops fictional-framing refusal from 14/15 to <strong>2/15</strong> on the held-out adversarial-jailbreak set — including 2 of the 3 prompts that <code>d̂</code> projected <em>below</em> the harmful/harmless midpoint. Augmenting <code>d̂</code> with 30 fictional-framing prompts doesn't help (2/15 → 3/15, within noise). The extraction-half "separable mechanism" reading from the 1.5-B test was reading <em>classification</em>, not <em>causation</em>: <code>d̂</code>'s linear boundary misses 3/15 of these prompts as a classifier, but the underlying mechanism it implements drives refusal on essentially all of them — once you ablate it, refusal collapses.
+The numbers confirm the lead-in: ablating <code>d̂</code> drops fictional-framing refusal 14/15 → 2/15, including 2 of the 3 below-midpoint prompts. Augmenting <code>d̂</code> with 30 fictional-framing prompts doesn't help (2/15 → 3/15, within noise) — additional training data refits the classifier without changing the causal mechanism, because the mechanism was already doing the work the classifier doesn't see.
 </p>
-<p style="margin-top: 0.8rem;">
-This is the §3 thesis stated at the <em>prompt</em> level rather than the direction level: a linear classifier and the causal mechanism it indexes are not the same boundary. <code>d̂</code> as a classifier covers ~80% of fictional-framing prompts; <code>d̂</code> as a causal mechanism reaches ~93% of them (12/15 fully ablated, 1/15 borderline residual). The one stubborn residual is the thriller/passport prompt — under ablation the model writes fictional atmosphere but evades the forgery technique, suggesting a small non-<code>d̂</code> mechanism for this specific kind of fictional jailbreak.
-</p>
-</div>
 <p style="font-size: 0.92rem; color: var(--fg-muted); margin-top: 0.6rem;">
 <em>Strongest confound + the control that rules it out.</em> A coarser interpretation would be that ablating <em>any</em> high-norm direction at all 26 layers damages refusal across the board. That's ruled out by the random-direction control in §4.8 (random-vector ablation on N = 200 HarmBench leaves refusal at 0.99) and by the LDA-bootstrap-101 cell in §3 (cross-distribution AUC ≥ 0.96, ablation refusal 0.985 / continuous z = -0.18). It's <code>d̂</code> specifically, not its norm or its layer-spread, that causes the drop.
 </p>
@@ -860,7 +864,7 @@ The headline experiment shows that, on Gemma-2-2b-it, the statistical extraction
 </p>
 <div class="callout">
 <p>
-<strong>Practical takeaway.</strong> Classification-equivalent directions should not be treated as causally equivalent. If the goal is to test multi-dimensional refusal structure, gradient-based extraction such as RDO should be evaluated separately from statistical extraction.
+<strong>Practical takeaway.</strong> Classification-equivalent directions should not be treated as causally equivalent. If the goal is to test multi-dimensional refusal structure, gradient-based extraction such as RDO should be evaluated separately from statistical extraction — the RDO comparison is queued for the Phase 2 target (see §9).
 </p>
 </div>
 <h3>7.2 Calibrated LLM judge</h3>
@@ -869,7 +873,7 @@ Substring scorers and LLM judges fail in different ways. I calibrated a refusal 
 </p>
 <h3>7.3 Bootstrap stability check on multi-direction claims</h3>
 <p>
-An initial “≥15 perfect-classification directions at L13” result did not survive a bootstrap stability check. Across five resamples of the harmful side, the count varied from 6 to 15, subspace overlap was approximately 0.27, and specific LDA directions were sample-dependent. What remains stable is the diff-of-means direction, the existence of high-AUC orthogonal directions, and the fact that the tested alternatives are causally inert.
+A finding about the model, surfaced by the stability check: <strong>the count of perfect-classification directions at L13 is sample-dependent, ranging 6–15 across five bootstrap resamples of the harmful side, with subspace overlap ≈ 0.27 and specific LDA directions varying with the resample.</strong> What is stable across resamples is the diff-of-means direction itself, the existence of high-AUC orthogonal directions, and the causal inertness of the tested alternatives. Any "we found N directions" claim about Gemma-2-2b-it has to be qualified by which resample produced it; the only counts the bootstrap promotes to invariants are 1 (the diff-of-means causal direction) and "≥ 2" (multiple cross-distribution classifiers exist).
 </p>
 <!-- ========= 7. DEFERRED ========= -->
 <h2 id="deferred">8. What's not yet done</h2>
@@ -880,7 +884,7 @@ The plain version: a few obvious next-step experiments are deliberately out of s
 <strong>HarmBench dual-judge evaluation.</strong> The runner exists with a <code>--scorer dual_judge</code> flag, but the standardized benchmark number is deferred. This would make the result more directly comparable to published ASR numbers.
 </p>
 <p>
-<strong>RDO replication.</strong> The next step is to reproduce the published four-dimensional cone result on Gemma-2-2b-it before making any extension claim.
+<strong>RDO replication.</strong> Queued as an in-progress comparison run against the Phase 2 target rather than deferred — the float64→float32 MPS patches are in (5 files in <code>~/safe_ai/geometry-of-refusal/</code>) and the Wollschläger RDO runner is ready to launch. The Gemma-2-2b-it four-dimensional cone reproduction precedes any multi-D extension claim on the Phase 2 model.
 </p>
 <p>
 <strong>Full 26-layer single-layer ablation sweep.</strong> The current localization result covers five layers. A full sweep would make the L13 localization claim stronger.
@@ -891,22 +895,22 @@ The plain version: a few obvious next-step experiments are deliberately out of s
 <!-- ========= 8. PHASE 2 ========= -->
 <h2 id="phase2">9. Phase 2 protocol</h2>
 <p>
-The plain version. Everything above is on Gemma-2-2b-it. The natural follow-up question is whether the pattern holds on a different open-weight family the literature has spent less time on. Phase 2 ports this exact protocol — same extraction, same controls, same dual-judge scoring, plus a mandatory RDO step — to a new model, with the prediction registered in advance.
+The plain version. Everything above is on Gemma-2-2b-it. The natural follow-up: does the pattern hold on a model from a different open-weight family the literature has spent less time on? Phase 2 ports this exact protocol — same extraction, same controls, same dual-judge scoring, with RDO as an in-progress comparison run — to <code>Qwen/Qwen2.5-3B-Instruct</code>, with the prediction registered in advance.
 </p>
 <p>
-Apply the same protocol to an under-studied open-weight model outside the current Gemma/Llama-centered evidence base. Candidate families include Qwen-2.5-Coder, DeepSeek-Coder-V2, and Phi-3 variants.
+<strong>Target: <code>Qwen/Qwen2.5-3B-Instruct</code>.</strong> The original master spec named Qwen-2.5-Coder-7B-Instruct; the switch is because (a) TransformerLens 3.2.1's <code>OFFICIAL_MODEL_NAMES</code> registry does not include the Coder variants, ruling them out for the current tooling stack, and (b) 3B keeps the full N = 200 HarmBench rigor standard tractable on MPS (Apple Silicon). The code-refusal research angle is preserved via a curated contrastive set: 150 code-themed harmful prompts (HarmBench <code>cybercrime_intrusion</code> + AdvBench code-keyword filter) + 150 length-matched CodeAlpaca harmless prompts, reproducibly built by <code>experiments/build_code_contrastive.py</code> and frozen at <code>data/code_contrastive.jsonl</code>. The code-refusal surface comes from the contrastive set, not from coder pretraining.
 </p>
 <div class="table-wrap">
 <table>
 <thead><tr><th>Step</th><th>What</th></tr></thead>
 <tbody>
-<tr><td class="num">1</td><td>Extraction-layer probe sweep — identify peak-AUC layer L* (don't port L13 as a constant)</td></tr>
+<tr><td class="num">1</td><td>Extraction-layer probe sweep on <code>data/code_contrastive.jsonl</code> — identify peak-AUC layer L* (don't port L13 as a constant)</td></tr>
 <tr><td class="num">2</td><td>Injection-layer + coefficient sweep at L* — map the operating band</td></tr>
 <tr><td class="num">3</td><td>Subspace dimensionality via statistical extraction + bootstrap stability</td></tr>
-<tr><td class="num">4</td><td><strong>RDO gradient extraction</strong> — mandatory for any multi-D claim</td></tr>
+<tr><td class="num">4</td><td><strong>RDO gradient extraction (in-progress comparison run).</strong> The float64→float32 MPS patches are in (5 files in <code>~/safe_ai/geometry-of-refusal/</code>); the RDO runner is ready to queue against the same target rather than deferred.</td></tr>
 <tr><td class="num">5</td><td>HarmBench + StrongREJECT dual-judge eval with per-category breakdown</td></tr>
 <tr><td class="num">6</td><td>TinyMMLU capability check</td></tr>
-<tr><td class="num">7</td><td>Headline number: "On model X, ablating the top-k RDO cone reduces HarmBench refusal from Y% to Z% with TinyMMLU preserved within εpp"</td></tr>
+<tr><td class="num">7</td><td>Headline number: "On Qwen-2.5-3B-Instruct, ablating the top-k RDO cone reduces HarmBench refusal from Y% to Z% with TinyMMLU preserved within εpp"</td></tr>
 </tbody>
 </table>
 </div>
@@ -918,8 +922,8 @@ The open question is whether the published multi-dimensional RDO finding general
 <p>
 <strong>Reproducibility.</strong> 43 unit tests pass. <code>python -m experiments.repro</code> verifies model hash, data hash, and key behavioral numbers (14/15 checks pass; only the TransformerLens version check fails). Per-prompt completions are persisted in <code>artifacts/runs/</code> for manual review.
 </p>
-<p style="margin-top: 0.8rem;">
-<strong>Framing.</strong> This writeup documents corrected claims explicitly: the initial ≥15-dimensional subspace claim was bootstrap-corrected, and the earlier “Arditi holds literally” framing was narrowed to a statistical-versus-gradient extraction distinction.
+<p style="font-size: 0.85rem; color: var(--fg-muted); margin-top: 0.8rem;">
+<em>Note on prior claims.</em> The ≥15-dimensional subspace claim from earlier drafts is now stated as the bootstrap-stable property in §7.3 (count is sample-dependent 6–15; only diff-of-means and the causal inertness of alternatives are stable). The earlier "Arditi holds literally" framing has likewise been narrowed via the statistical-vs-gradient extraction distinction in §7.1.
 </p>
 </div>
 </div>

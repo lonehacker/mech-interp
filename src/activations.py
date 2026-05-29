@@ -16,6 +16,8 @@ from typing import Iterable
 import torch
 from tqdm.auto import tqdm
 
+from typing import Callable
+
 from .model import ModelBundle, format_prompt, tokenize_prompt
 
 
@@ -30,6 +32,7 @@ def cache_resid(
     layer: int,
     apply_template: bool = True,
     show_progress: bool = True,
+    format_fn: Callable[[str], str] | None = None,
 ) -> torch.Tensor:
     """Cache residual-stream activations at the last token of each prompt.
 
@@ -39,6 +42,9 @@ def cache_resid(
     prompts: raw user messages; templated inside this function unless
         apply_template=False (only useful for the Phase 0 sanity check).
     layer: block index; activation read from blocks.{layer}.hook_resid_post.
+    format_fn: optional override for prompt templating. Default = `format_prompt`
+        (Gemma). For Phase 2 / Qwen / any non-Gemma model, pass
+        `lambda msg: format_prompt_for_bundle(bundle, msg)`.
 
     Returns
     -------
@@ -47,6 +53,8 @@ def cache_resid(
     """
     if layer < 0 or layer >= bundle.n_layers:
         raise ValueError(f"layer {layer} out of range [0, {bundle.n_layers})")
+    if format_fn is None:
+        format_fn = format_prompt
 
     hook_name = _resid_hook_name(layer)
     out: list[torch.Tensor] = []
@@ -54,7 +62,7 @@ def cache_resid(
     iterator = tqdm(list(prompts), desc=f"cache L{layer}") if show_progress else prompts
 
     for raw in iterator:
-        text = format_prompt(raw) if apply_template else raw
+        text = format_fn(raw) if apply_template else raw
         ids = tokenize_prompt(bundle, text) if apply_template else bundle.model.to_tokens(text)
         _, cache = bundle.model.run_with_cache(
             ids,
@@ -75,14 +83,21 @@ def cache_resid_all_layers(
     prompts: Iterable[str],
     apply_template: bool = True,
     show_progress: bool = True,
+    format_fn: Callable[[str], str] | None = None,
 ) -> torch.Tensor:
     """Same as cache_resid but stacked across every layer in one forward pass.
+
+    `format_fn` works identically to cache_resid — default Gemma, pass
+    `lambda msg: format_prompt_for_bundle(bundle, msg)` for other models.
 
     Returns
     -------
     Tensor of shape [n_prompts, n_layers, d_model] on CPU. Used for the layer
     sweep (Step 2) so we only forward each prompt once.
     """
+    if format_fn is None:
+        format_fn = format_prompt
+
     n_layers = bundle.n_layers
     hook_names = [_resid_hook_name(L) for L in range(n_layers)]
     out: list[torch.Tensor] = []
@@ -90,7 +105,7 @@ def cache_resid_all_layers(
     iterator = tqdm(list(prompts), desc="cache all layers") if show_progress else prompts
 
     for raw in iterator:
-        text = format_prompt(raw) if apply_template else raw
+        text = format_fn(raw) if apply_template else raw
         ids = tokenize_prompt(bundle, text) if apply_template else bundle.model.to_tokens(text)
         _, cache = bundle.model.run_with_cache(
             ids,
