@@ -334,6 +334,9 @@ On Gemma-2-2b-it, this drops refusal from <strong>99% to 8% on HarmBench (n = 20
 (random-direction ablation stays at 99% refusal). General capability is preserved (TinyMMLU Δ = +0.03, within noise). The model answers as fluently as before; it
 just no longer declines in many cases where it previously did. The same direction works at any single mid-network layer (single-layer ablation at L13 alone drops refusal to 0%), and the drop generalizes across all six HarmBench harm categories at ≥ 79 percentage points each.
 </p>
+<p>
+One thing worth surfacing up front, because I didn't fully register it until I worked through this experiment myself: <strong>this cross-benchmark transfer is a known phenomenon in the refusal-direction literature, not a discovery here.</strong> Arditi et al. (2024) tested several harmful-prompt benchmarks; the refusal direction generalizes across them by design. What this writeup adds on top of that is the specific magnitude on Gemma-2-2b-it under controlled conditions: 91pp uniform drop, dual-judge cross-check between Claude Haiku 4.5 and Claude Opus 4.7, and a sharper claim about which directions are causal vs which are only classification-equivalent (see §3). The contribution is the cleanness of the controlled measurement and the methodology angle, not the discovery of cross-benchmark transfer itself.
+</p>
 <div class="callout">
 <p>
 <strong>The implication is blunt.</strong> As open-weight models become more capable, refusal mechanisms that can be removed by
