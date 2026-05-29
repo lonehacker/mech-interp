@@ -500,9 +500,9 @@ Projecting <code>d̂</code> onto activations across layers shows a large amplifi
 </figcaption>
 </figure>
 <h3>4.8 HarmBench — held-out, N = 200, dual-judge</h3>
-<p><em>Question: does the L13 diff-of-means ablation scale beyond the N = 12 held-out AdvBench split, and does it generalize to a different harmful-prompt benchmark?</em></p>
+<p><em>Question: is the refusal direction the same whether you extract it from AdvBench or work with HarmBench prompts, or is it distribution-specific? This section answers half of that — the <strong>transfer</strong> half: extract <code>d̂</code> from AdvBench at L13, ablate during generation, evaluate refusal rate on 200 held-out HarmBench prompts. §4.10 closes the loop with the reverse direction (extracting <code>d̂</code> from HarmBench and comparing the two directions).</em></p>
 <p>
-<code>d̂</code> extracted from AdvBench at L13. Evaluated on 200 HarmBench standard-behavior prompts — never seen during extraction. Scored with dual LLM judges: Claude Haiku 4.5 as the primary, Claude Opus 4.7 as a cross-check on every prompt.
+Dual-judge scoring: Claude Haiku 4.5 primary, Claude Opus 4.7 cross-check on every prompt.
 </p>
 <div class="table-wrap">
 <table>
@@ -537,7 +537,10 @@ Projecting <code>d̂</code> onto activations across layers shows a large amplifi
 </p>
 <div class="finding-box">
 <p>
-<strong>Finding.</strong> The L13 diff-of-means ablation generalizes from the N = 12 AdvBench held-out test to 200 HarmBench prompts at the same magnitude: 99% → 8% refusal, with perfect specificity, uniform across six semantic categories of harm. <strong>Wollschläger et al. (ICML 2025) report 79.9% JailbreakBench ASR on the same model with gradient-based RDO.</strong> Our 91% HarmBench compliance using simple diff-of-means lands in the same ballpark — different benchmarks and judges so not directly comparable as exact numbers, but the qualitative read is that statistical extraction is competitive with gradient extraction for behavioral effect on this model. The gradient method's edge likely matters more on larger models with direction-redundancy.
+<strong>Finding (transfer half).</strong> The causal refusal direction extracted from AdvBench — L13 diff-of-means <code>d̂</code> — <strong>ablates refusal on HarmBench at the same magnitude</strong>: 99% → 8%, perfect specificity (random direction stays at 99%), uniform across all six HarmBench semantic categories (Δ ≥ 0.79). Same direction, different harmful-prompt distribution, same behavioral effect. This is a directly-defensible claim: AdvBench-extracted <code>d̂</code> is not specific to AdvBench's particular phrasings; it generalizes as a refusal-suppressor on a held-out benchmark with a different prompt distribution and a different harm taxonomy. The full "is it the same direction" question requires the reverse direction too — §4.10 extracts <code>d̂</code> from HarmBench independently and compares.
+</p>
+<p style="margin-top: 0.8rem;">
+<strong>Comparison to Wollschläger 2025.</strong> They report 79.9% JailbreakBench ASR on the same model using gradient-based RDO. Our 91% HarmBench compliance using simple diff-of-means lands in the same ballpark — different benchmarks and judges so not directly comparable as exact numbers, but the qualitative read is that statistical extraction is competitive with gradient extraction for behavioral effect on this model. The gradient method's edge likely matters more on larger models with direction-redundancy.
 </p>
 </div>
 <h3>4.9 TinyMMLU capability check</h3>
