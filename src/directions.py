@@ -220,6 +220,47 @@ def ablate_subspace(
         yield
 
 
+def extract_d_hat(
+    bundle,
+    harmful: list[str],
+    harmless: list[str],
+    *,
+    layer: int,
+    position: int = -1,
+    format_fn=None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
+    """Canonical diff-of-means extraction at one (layer, position) cell.
+
+    Composes the four operations the per-cell sweep does at every cell:
+      1. cache_resid on harmful set at (layer, position) → H [n_h, d_model]
+      2. cache_resid on harmless set at (layer, position) → L [n_l, d_model]
+      3. d_hat = unit(diff_of_means(H, L))
+      4. natural_scale = mean projection of H onto d_hat (the alpha for addition)
+
+    Returns (d_hat, H, L, meta) where meta = {"natural_scale",
+    "harmless_mean", "midpoint"}. No caching — runs the forward passes fresh
+    on each call. For cached invocations (Phase 2 step3 family that reuses
+    activations across runs), see `experiments._runner.cached_extract_d_hat`.
+
+    For an example of how this composes with `bypass_gap` for a per-cell
+    sweep, see HOW_IT_WORKS.md §"How the code does the per-cell sweep" or
+    `experiments/phase2_part2_dim_bypass_gap_sweep.py`.
+    """
+    from src.activations import cache_resid
+    H = cache_resid(bundle, harmful, layer=layer, position=position,
+                    format_fn=format_fn, show_progress=False)
+    L = cache_resid(bundle, harmless, layer=layer, position=position,
+                    format_fn=format_fn, show_progress=False)
+    d_hat = unit(diff_of_means(H, L))
+    h_mean = float((H @ d_hat).mean().item())
+    l_mean = float((L @ d_hat).mean().item())
+    return d_hat, H, L, {
+        "natural_scale": h_mean,
+        "harmless_mean": l_mean,
+        "midpoint": 0.5 * (h_mean + l_mean),
+    }
+
+
 def bypass_gap(
     bundle,
     direction: torch.Tensor,

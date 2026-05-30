@@ -348,6 +348,22 @@ but that conflates two independent choices. They factor as:
 - **Extraction method**: given a layer, which vector to compute. Options:
   diff-of-means (`d̂`) or RDO (`d_rdo`).
 
+**A point worth making explicit because it's easy to miss**: layer-selection
+doesn't need a direction-it-doesn't-have-yet. Diff-of-means is cheap — for
+each candidate `(layer, position)`, you cache activations on the contrastive
+set, subtract centroids, and you have `d̂_(L, pos)` for that cell. Do this at
+all cells once and you have one candidate direction per cell (180 of them for
+Qwen at 36 layers × 5 positions). Then "layer-selection" is just *ranking*
+the candidates — by linear-probe AUC (does `d̂_(L,pos)` classify harmful/
+harmless cleanly?) or by bypass-gap (does ablating `d̂_(L,pos)` drop the
+refusal-token logit on harmful val prompts?). Same candidate set, two ranking
+metrics, potentially different winners. There's no chicken-and-egg.
+
+RDO is different: it takes a single layer as **input** (chosen upstream by
+bypass-gap-layer-selection) and gradient-descends *at that fixed layer* to
+find a direction whose ablation maximizes refusal drop. So RDO needs the
+layer chosen first; it doesn't sweep layers itself.
+
 We picked L14 by AUC. But on Qwen, separability is saturated (≥0.994 at every
 layer including L0 = 0.9996), so AUC can't *discriminate* layers — L14 was
 effectively the first layer to hit float-1.000. The L14 ablation null is a
@@ -366,6 +382,73 @@ dual-judge scoring and an explicit coherence read at the best cell.
 
 `PROJECT_STATE.md` has the 2×2 + binding terminology for any docs that need to
 talk about layer-selection vs extraction separately.
+
+### How the code does the per-cell sweep
+
+Concrete walkthrough of the Part 2 runner
+(`experiments/phase2_part2_dim_bypass_gap_sweep.py`) so the conceptual story
+above maps to actual function calls:
+
+**Stage 1 — extract candidate directions at every cell.** Cheap. One forward
+pass per prompt at each `(layer, position)` cell, centroid subtraction:
+
+```python
+from src.activations import cache_resid
+from src.directions import diff_of_means, unit
+
+candidates = {}
+for L in layers:                          # e.g. [19, 20, ..., 25]
+    for pos in positions:                 # e.g. [-1, -4]
+        H_cell = cache_resid(bundle, harmful_train,  layer=L, position=pos)
+        L_cell = cache_resid(bundle, harmless_train, layer=L, position=pos)
+        d_hat_cell = unit(diff_of_means(H_cell, L_cell))   # [d_model]
+        candidates[(L, pos)] = d_hat_cell
+```
+
+After this, `candidates` holds one `[d_model]` vector per cell — 14 cells for
+the L19-L25 × {-1, -4} sweep, 180 cells for the full Wollschläger 36 × 5
+sweep. There's no chicken-and-egg: every cell has a candidate.
+
+**Stage 2 — measure each candidate's causal effect.** Expensive. For each
+candidate, run generation under ablation and score the refusal-rate drop. The
+primitive for "what's the bypass-gap of *this* direction?" is
+`src.directions.bypass_gap`:
+
+```python
+from src.directions import bypass_gap
+
+# Generate the baseline once — same test set across all cells.
+baseline = generate_batch(bundle, harmful_test, max_new_tokens=160, temperature=0.0)
+
+for (L, pos), d_hat_cell in candidates.items():
+    result = bypass_gap(
+        bundle, d_hat_cell, harmful_test,
+        baseline_completions=baseline,    # reuse — don't regenerate per cell
+        max_new_tokens=160,
+    )
+    print(f"L{L} pos{pos}: gap = {result['gap']:.3f}  "
+          f"(baseline {result['baseline_refusal']:.3f} → "
+          f"ablated {result['ablated_refusal']:.3f})")
+```
+
+That's the bypass-gap layer-selection criterion in two stages: cheap cache
++ centroid for the candidate set, expensive but parallelizable gap
+measurement to rank them. `bypass_gap` returns the completions too, which is
+what the Part 2 coherence read consumes (see `TestBypassGap` in
+`tests/test_directions.py` for the contract on stub objects).
+
+**Why this generalizes.** Same code shape works for:
+- AUC ranking instead of bypass-gap — same candidates, but rank by
+  `LinearDiscriminantAnalysis(...).score(...)` on `(H_cell, L_cell)` instead
+  of by `bypass_gap`. No new infrastructure.
+- LDA extraction instead of diff-of-means — swap `diff_of_means(H, L)` for
+  `lda_directions(H, L, k=1)[0]` in Stage 1. Same Stage 2.
+- Random-direction specificity — pass a `random_unit_vector(d_model, seed)`
+  as the direction. Same `bypass_gap` call.
+
+The 2×2 in PROJECT_STATE.md is exactly this code structure: Stage 1's
+extractor (`diff_of_means` vs `lda_directions` vs externally-trained
+`d_rdo`) crossed with Stage 2's selection metric (AUC vs `bypass_gap`).
 
 ## How the continuous causal metric (Phase 1.5) works
 
