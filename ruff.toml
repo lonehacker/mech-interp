@@ -30,8 +30,16 @@ extend-exclude = [
 # default ruff format settings — black-compatible
 
 [lint]
+# Rule selection benchmarked against peer mech-interp repos:
+#   EleutherAI/sae, EleutherAI/elk:  E, F, I               (minimal canonical)
+#   SAELens:                         UP, TID, I, F, E, ARG, SIM, RET, LOG, T20
+#   ARENA_3.0:                       I  (+ many ignores for jaxtyping idioms)
+#   nnsight, TransformerLens:        no ruff (use black + pylint/mypy)
+# Our selection is closest to SAELens's — more discipline than the minimal,
+# less than a production library would enforce.
 select = [
   "E", "F", "W",      # pycodestyle / pyflakes basics
+  "ARG",              # unused arguments — catches dead refactor parameters
   "B",                # bugbear — common gotchas
   "C4",               # comprehension simplifications
   "I",                # isort
@@ -41,8 +49,8 @@ select = [
   "RET",              # flake8-return — superfluous-else-return etc.
   "RUF",              # ruff-specific
   "SIM",              # simplify
-  "TID",              # tidy imports
-  "UP",               # pyupgrade
+  "TID",              # tidy imports — also enables typing.Optional/Union bans below
+  "UP",               # pyupgrade — modernizes `Optional[X]` → `X | None`, etc.
   "FURB",             # refurb — modern idioms
 ]
 
@@ -74,7 +82,10 @@ ignore = [
 
   # Scientific-shorthand variable names — h/l for harmful/harmless, x for activations
   "E741",    # ambiguous-variable-name (l, I, O)
+  "E731",    # lambda-assignment — common with `apply()`, `vmap`, cache hooks (peer repos: ARENA, SAELens)
   "E701", "E702",  # multiple-statements-on-one-line — `if x: continue` is idiomatic
+  "F722",    # forward-annotation-syntax — needed if/when we adopt jaxtyping
+                  # (Float[Tensor, "batch seq d_model"] reads as undefined-name)
 
   # zip(strict=...) — would catch a real class of bug but currently we have
   # 38 instances; rather than a flag-day fix, leave as a known thing. Add
@@ -83,13 +94,31 @@ ignore = [
 ]
 
 [lint.isort]
-force-single-line = false           # research code lines up imports normally; merge-conflict risk is low at this size
+force-single-line = false           # research code lines up imports normally; merge-conflict risk low at this size
 known-first-party = ["src", "experiments", "tests"]
+
+[lint.flake8-tidy-imports.banned-api]
+# Push legacy typing imports → modern syntax (peer pattern: SAELens does this).
+# `Optional[X]` → `X | None`; `List[X]` → `list[X]`; `Tuple[X, Y]` → `tuple[X, Y]`.
+# These are PEP 604 (3.10+) and PEP 585 (3.9+); target-version py311 already
+# supports both.
+"typing.Optional".msg = "Use `X | None` instead (PEP 604)."
+"typing.Union".msg = "Use `X | Y` instead (PEP 604)."
+"typing.List".msg = "Use `list[X]` instead (PEP 585)."
+"typing.Dict".msg = "Use `dict[K, V]` instead (PEP 585)."
+"typing.Tuple".msg = "Use `tuple[X, Y]` instead (PEP 585)."
+"typing.Set".msg = "Use `set[X]` instead (PEP 585)."
+"typing.FrozenSet".msg = "Use `frozenset[X]` instead (PEP 585)."
+"typing.Type".msg = "Use `type[X]` instead (PEP 585)."
 
 [lint.per-file-ignores]
 # Tests can use assert and have other niceties relaxed
 "tests/**" = ["S101", "B011"]
-# Experiment runners often print() final results to stdout — that's intentional
-"experiments/**" = ["T20"]
+# Experiment runners legitimately:
+#   - print() final results to stdout (T20)
+#   - have argparse defaults that look like function-call defaults (B008)
+#   - sometimes import after sys.path.insert(0, repo_root) (E402)
+#   - leave unused argparse args from copy/paste prototyping (ARG001/ARG002)
+"experiments/**" = ["T20", "B008", "E402", "ARG001", "ARG002"]
 # Memory/scratch files in /tmp — irrelevant
 "/tmp/**" = ["INP001"]
