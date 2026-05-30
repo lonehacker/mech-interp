@@ -52,21 +52,48 @@ Same harness as `phase2_step3` (ablation) and `phase2_step3d` (operating-band ad
 
 ## Pre-registered asymmetric read
 
-### POSITIVE outcome at n=40
+### STRONG POSITIVE outcome at n=40
 
 **Definition:** ANY of the following on the matched set:
 - Ablation Δ ≥ 0.30 with d̂_matched vs ≤ 0.10 with random direction (specificity), coherent refusal-loss in completions (not degeneration).
 - Addition sweep with any (layer × coefficient ≥ 1×) cell inducing refusal lift ≥ 0.30, coherent refusal in completions, random-vector specificity control at that cell does NOT produce comparable lift.
 
-**Reading:** (A-i) provisionally LOCKED. The Qwen null on `code_contrastive` was contrastive-set-driven: removing the lexical confound recovers a diff-of-means direction with a causal hand on refusal. Methodological lesson is sharp — *on lexically-separable contrastive sets, diff-of-means recovers vocabulary, not refusal, and AUC ≈ 1.0 does not tell you which.*
+**Reading:** (A-i) provisionally LOCKED. The Qwen null on `code_contrastive` was contrastive-set-driven: removing the lexical confound recovers a diff-of-means direction with a causal hand on refusal. Methodological lesson is sharp — *on lexically-separable contrastive sets, diff-of-means recovers vocabulary, not refusal, and AUC ≈ 1.0 does not tell you which.* Stance entanglement still applies: "isolates refusal-OR-stance, not refusal alone."
 
 **Scale-up plan:** Author 60 more matched pairs (100 total) for a hardened headline result with statistical power for the Phase 2 writeup. RDO (Step D) becomes nice-to-have confirmation rather than load-bearing.
 
+### WEAK POSITIVE outcome at n=40
+
+**Definition:** All of:
+- Ablation Δ in [0.10, 0.30] for d̂_matched OR addition lift in [0.10, 0.30] for some cell.
+- **Specificity is load-bearing:** random-vector control at the same cell/coefficient sits clearly below the d̂_matched effect (e.g. random Δ ≤ 0.05 while d̂_matched Δ ≥ 0.15 — a clear gap, not noise overlap).
+- **Coherence preserved:** the lifted-cell completions read as actual refusals (full sentences, names the user's request, declines with reason) rather than degeneration (short/empty/repeating-tokens).
+
+**Reading: directionally A-i.** The de-confounded d̂ recovered PARTIAL causal signal that the lexical d̂ on `code_contrastive` lacked (Δ ≈ 0.00 there). This is materially different from the flat code_contrastive null and from a 0.50 chance-aligned random reading. It says: removing the lexical confound *did* surface a causal component, just at modest magnitude compared to Gemma's ~0.91 — likely because n=40 is underpowered, because the matched set's stance entanglement weakens specificity, or because Qwen's refusal mechanism is genuinely more distributed (an RDO-discoverable subspace rather than a single direction).
+
+**Scale-up plan:** Author 60 more matched pairs (100 total) to SHARPEN the effect (estimate its magnitude with tight CIs), not to determine existence. A weak positive at n=40 with specificity is enough to support directional A-i; scaling clarifies the size.
+
+**Critical caveat:** if random-vector control matches the d̂_matched lift at the same cell, this is NOT a weak positive — it's a magnitude artifact and reads as NULL. The d̂-specificity check is what separates weak positive from magnitude noise.
+
 ### NULL outcome at n=40
 
-**Definition:** Ablation Δ < 0.10 on the matched set AND no addition cell hits substring lift ≥ 0.30 with d̂-specific causation (specificity control matches the lift, OR coherence breaks down).
+**Definition:** All of:
+- Ablation Δ < 0.10 for d̂_matched on the matched set.
+- No addition cell hits substring lift ≥ 0.10 with d̂-specific causation (random control matches the lift, OR coherence breaks down at higher coefficients).
 
 **Reading: INCONCLUSIVE.** n=40 with 10 held-out test prompts has low statistical power. A null at this scale is *consistent with* both (A-i) — the matched set hasn't removed enough of the confound or N too small — and (A-ii) — refusal really isn't in a diff-of-means direction on Qwen. **Do not claim (A-ii) from this experiment alone.**
+
+### d̂_old vs d̂_matched comparison (within-experiment control, strongest single readout)
+
+The 4-cell ablation table includes both `ablate_d̂_matched` and `ablate_d̂_old` on the SAME 10 held-out matched-harmful prompts. Same prompts, same model, same intervention; only the contrast-of-origin differs. Pre-committed reading:
+
+- **d̂_matched causal (Δ ≥ 0.10 with specificity) AND d̂_old inert (Δ < 0.10) on the same matched-harmful prompts → STRONGEST A-i evidence.** De-confounding is isolated as the operative variable: the lexical direction doesn't move refusal on these prompts, the de-confounded one does. This is a stronger reading than the matched-d̂ effect alone because it's a within-experiment control — random variance, prompt-distribution effects, and Qwen-specific quirks are all held constant; only the contrastive set origin varies.
+
+- **Both d̂_matched and d̂_old causal on the matched-harmful prompts → the effect isn't about de-confounding.** The lexical direction *also* works on these prompts, which contradicts the (A-i) story. Reconsider what d̂_matched is capturing — maybe matched-harmful prompts are just easier to flip on Qwen for reasons unrelated to the contrast (e.g., they're more on-distribution for the model's refusal training).
+
+- **Both d̂_matched and d̂_old inert → consistent with the n=40 null reading.** Don't claim (A-ii); scale up.
+
+- **d̂_old causal but d̂_matched inert → unexpected and informative.** Would suggest the de-confounded extraction somehow LOST the causal signal the lexical extraction had. Flag for investigation; possible if vocabulary signal was inadvertently a proxy for the true causal direction in `code_contrastive`'s activation geometry.
 
 **Scale-up plan:** Author 60 more matched pairs (100 total) and re-run. If d̂_matched is *still* inert at n=100 with proper N-per-cell, then (A-ii) is provisionally earned and RDO (Step D) becomes the decisive next experiment.
 
