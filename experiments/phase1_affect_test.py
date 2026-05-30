@@ -34,7 +34,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -42,7 +41,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import torch
 
 from experiments._runner import (
-    DATA,
     RESULTS,
     cached_activations,
     content_hash,

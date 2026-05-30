@@ -36,6 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -44,7 +45,6 @@ from sklearn.metrics import roc_auc_score
 
 from experiments._runner import (
     ARTIFACTS_FIGURES,
-    DATA,
     RESULTS,
     cached_activations,
     content_hash,
@@ -266,7 +266,7 @@ def _render_summary(rec: dict) -> str:
         "",
         f"- Model: `{rec['model']}` on `{rec['device']}` | n_layers={rec['n_layers']}",
         f"- n harmful = {rec['n_harmful']}, n harmless = {rec['n_harmless']}",
-        f"- Data: `data/phase0-pairs.jsonl` (the Phase-0 hand-written set; replace per Step 1 (H) before publishing)",
+        "- Data: `data/phase0-pairs.jsonl` (the Phase-0 hand-written set; replace per Step 1 (H) before publishing)",
         "",
         "## Headline",
         "",

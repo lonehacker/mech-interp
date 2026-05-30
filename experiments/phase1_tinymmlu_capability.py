@@ -30,13 +30,11 @@ import argparse
 import math
 import re
 import sys
-from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
-import torch
 
 from experiments._runner import (
     RESULTS,
@@ -50,7 +48,7 @@ from experiments._runner import (
 )
 from src.activations import cache_resid
 from src.directions import ablate_dir, diff_of_means, unit
-from src.model import generate, format_prompt
+from src.model import generate
 
 log = get_logger("phase1_tinymmlu")
 
@@ -231,8 +229,8 @@ def _render_summary(rec):
     md = [
         "# Phase 1 — TinyMMLU capability check under d_hat ablation",
         "",
-        f"**Question:** is the d_hat ablation specific to refusal, or does it "
-        f"also degrade general capability?",
+        "**Question:** is the d_hat ablation specific to refusal, or does it "
+        "also degrade general capability?",
         "",
         f"- Model: `{rec['model']}`",
         f"- d_hat from AdvBench at L{rec['extract_layer']}",

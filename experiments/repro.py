@@ -57,7 +57,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np
 import torch
 
-from experiments._runner import DATA, RESULTS, get_logger, get_model
+from experiments._runner import RESULTS, get_logger, get_model
 from src.activations import cache_resid
 from src.directions import diff_of_means, project, unit
 from src.eval import is_refusal

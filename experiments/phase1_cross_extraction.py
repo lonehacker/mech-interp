@@ -40,7 +40,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
-import torch
 from sklearn.metrics import roc_auc_score
 
 from experiments._runner import (
@@ -203,13 +202,13 @@ def main() -> int:
     log.info("summary -> %s", md_path)
 
     print()
-    print(f"=== phase1_cross_extraction ===")
+    print("=== phase1_cross_extraction ===")
     print(f"cos(d_hat_advbench, d_hat_harmbench) = {cos:.4f}")
     print()
-    print(f"d_hat_advbench:")
+    print("d_hat_advbench:")
     print(f"  AUC on AdvBench  vs Alpaca: {advbench_dhat_stats['auc_advbench_vs_alpaca']:.3f}")
     print(f"  AUC on HarmBench vs Alpaca: {advbench_dhat_stats['auc_harmbench_vs_alpaca']:.3f}")
-    print(f"d_hat_harmbench:")
+    print("d_hat_harmbench:")
     print(f"  AUC on AdvBench  vs Alpaca: {harmbench_dhat_stats['auc_advbench_vs_alpaca']:.3f}")
     print(f"  AUC on HarmBench vs Alpaca: {harmbench_dhat_stats['auc_harmbench_vs_alpaca']:.3f}")
     print()

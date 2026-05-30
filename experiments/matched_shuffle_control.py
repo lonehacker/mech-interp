@@ -14,8 +14,10 @@ chance (~0.5).
 If shuffled labels → chance: mechanism confirmed.
 If shuffled labels → still ~0.29: explanation wrong, something else.
 """
-import hashlib, json
+import hashlib
+import json
 from pathlib import Path
+
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -53,7 +55,7 @@ baseline = run_cv(texts, true_labels, min_df=1, seed=0)
 print(f"  per-fold: {['%.4f' % a for a in baseline]}")
 print(f"  mean={np.mean(baseline):.4f}  SD={np.std(baseline, ddof=1):.4f}  "
       f"range=[{min(baseline):.4f}, {max(baseline):.4f}]")
-print(f"  → asserted: anti-prediction (every fold below 0.5)\n")
+print("  → asserted: anti-prediction (every fold below 0.5)\n")
 
 # 2. Shuffled labels: 10 independent seeds for the shuffle, 5-fold CV each
 # Each shuffle preserves 40-40 balance but breaks pair-label correspondence
@@ -86,9 +88,9 @@ print(f"  True-label baseline mean:   {baseline_mean:.4f}  (anti-prediction)")
 print(f"  Shuffled-label mean:        {shuf_mean:.4f}  (chance prediction is ≈ 0.5)")
 print(f"  Δ (shuffled - baseline):    {shuf_mean - baseline_mean:+.4f}")
 if abs(shuf_mean - 0.5) < 0.05 and shuf_mean - baseline_mean > 0.1:
-    print(f"  → MECHANISM CONFIRMED: breaking the pairing restored chance.")
-    print(f"     min_df=1 anti-prediction on the matched set is a paired-construction")
-    print(f"     CV artifact, not residual lexical separability.")
+    print("  → MECHANISM CONFIRMED: breaking the pairing restored chance.")
+    print("     min_df=1 anti-prediction on the matched set is a paired-construction")
+    print("     CV artifact, not residual lexical separability.")
 else:
-    print(f"  → MECHANISM NOT CONFIRMED: shuffled labels didn't restore chance.")
-    print(f"     The explanation is incomplete; something else drives the 0.29.")
+    print("  → MECHANISM NOT CONFIRMED: shuffled labels didn't restore chance.")
+    print("     The explanation is incomplete; something else drives the 0.29.")

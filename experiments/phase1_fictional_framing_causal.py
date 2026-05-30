@@ -262,17 +262,17 @@ def main() -> int:
     md_path.write_text(_render_summary(record))
     log.info("summary -> %s", md_path)
 
-    print(f"\n=== phase1_fictional_framing_causal ===")
+    print("\n=== phase1_fictional_framing_causal ===")
     print(f"cos(d̂_old, d̂_augmented) = {cos:.4f}")
-    print(f"3 conditions × 15 prompts, substring scorer:")
+    print("3 conditions × 15 prompts, substring scorer:")
     print(f"  baseline:           refusal {substr_rates['baseline']:.3f}")
     print(f"  ablate d̂_old:       refusal {substr_rates['ablate_d_old']:.3f} (Δ = {-raw_drop_d_old:+.3f})")
     print(f"  ablate d̂_augmented: refusal {substr_rates['ablate_d_augmented']:.3f} (Δ = {-raw_drop_d_aug:+.3f})")
     if judge_results:
-        print(f"\nLLM judge (Haiku 4.5):")
+        print("\nLLM judge (Haiku 4.5):")
         for name, r in judge_results.items():
             print(f"  {name:22s} refusal {r['refusal_rate']:.3f} ({r['n_refused']}/15)")
-        print(f"\nSubset (judge) — 12 above-midpoint vs 3 below-midpoint:")
+        print("\nSubset (judge) — 12 above-midpoint vs 3 below-midpoint:")
         for name, r in subset_rates_judge.items():
             print(f"  {name:22s} above: {r['above_midpoint_n_12']:.3f} | below: {r['below_midpoint_n_3']:.3f}")
     return 0

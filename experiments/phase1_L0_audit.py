@@ -15,7 +15,6 @@ from pathlib import Path
 sys.path.insert(0, "/Users/anshulsinghle/safe_ai/mech-security")
 
 import numpy as np
-import torch
 from sklearn.metrics import roc_auc_score
 
 from experiments._runner import cached_activations, content_hash, get_model, load_jsonl_pairs
@@ -57,9 +56,9 @@ def main():
     n_layers = H_all.shape[1]
     # Pick a few representative layers for the table
     layers_to_check = [0, 1, 2, 5, 8, 13, 20, 23, n_layers - 1]
-    layers_to_check = [L for L in layers_to_check if L < n_layers]
+    layers_to_check = [L for L in layers_to_check if n_layers > L]
 
-    print(f"\nPer-layer real diff-of-means AUC + 5-seed random AUC distribution:")
+    print("\nPer-layer real diff-of-means AUC + 5-seed random AUC distribution:")
     print(f"\n{'Layer':>6} | {'Real AUC':>10} | {'Random (5 seeds): mean ± std, range':>50}")
     print(f"-{'-' * 6}-+-{'-' * 10}-+-{'-' * 50}")
 

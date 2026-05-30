@@ -1,0 +1,95 @@
+# ruff config for an ML research repo.
+# Modeled on whatnot_backend/ruff.toml but stripped of backend-specific
+# rules (async, SQLAlchemy, banned-api lists, security suite). Research
+# code has different conventions: lots of NumPy/PyTorch idioms, jupyter-
+# adjacent style, less docstring discipline, more disposable scripts.
+#
+# What we enforce:
+#   - basic correctness (E, F, W, B)
+#   - clean imports + isort (I, TID, INP)
+#   - modern Python (UP, SIM, C4)
+#   - bug-catchers (B, FURB, RET, RUF)
+#   - no commented-out code (ERA) — except we don't enable it; it has FPs on data tables
+#
+# What we DON'T enforce:
+#   - docstrings (D*) — research code documents results in markdown, not code
+#   - complexity (PLR*) — some experiment runners legitimately have long mains
+#   - bandit security (S) — research code, no production threat model
+#   - per-method type stubs — too much friction for prototyping
+
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+  "artifacts",        # tensor caches + run dirs
+  "graphify-out",     # generated codebase graph
+  "logs",
+  "*.ipynb",          # jupyter cells get their own conventions
+]
+
+[format]
+# default ruff format settings — black-compatible
+
+[lint]
+select = [
+  "E", "F", "W",      # pycodestyle / pyflakes basics
+  "B",                # bugbear — common gotchas
+  "C4",               # comprehension simplifications
+  "I",                # isort
+  "INP",              # implicit-namespace-package (catches missing __init__.py)
+  "PIE",              # misc pie rules (dup-class-fields, multiple-starts-ends, …)
+  "PGH",              # pygrep-hooks (eval-no-globals, blanket noqa)
+  "RET",              # flake8-return — superfluous-else-return etc.
+  "RUF",              # ruff-specific
+  "SIM",              # simplify
+  "TID",              # tidy imports
+  "UP",               # pyupgrade
+  "FURB",             # refurb — modern idioms
+]
+
+ignore = [
+  # Incompatible with formatter / docstring conventions we don't use
+  "E501",   # line-too-long — formatter handles it
+  "E731",   # lambda — we use them in cache_resid(format_fn=lambda ...)
+
+  # Complexity rules we deliberately don't enforce on a research codebase
+  "PLR0904", "PLR0911", "PLR0912", "PLR0913", "PLR0914", "PLR0915", "PLR0916", "PLR0917",
+  "PLR1702",
+
+  # Stylistic disagreements
+  "RUF012",  # mutable class default — we use dataclass with default_factory in TokenSetDiscovery
+  "RUF029",  # unused-async — we don't have async here anyway
+  "SIM105",  # suppressible-exception — sometimes a try/except IS clearer than contextlib.suppress
+  "TD003",   # missing-todo-link
+  "RET504",  # unnecessary-assign-before-return — readability call
+
+  # Research-code escape hatches
+  "ERA001",  # commented-out-code — false positives on data tables, validated token lists
+  "B008",    # mutable-default-argument — `factory=field(default_factory=list)` is fine in dataclasses
+  "FURB101", "FURB103",  # read-whole-file / write-whole-file — fine for small artifacts
+  "E402",    # module-level-import-not-at-top — we sometimes import after sys.path.insert
+
+  # Unicode in math/ML notation is intentional, not a bug
+  "RUF001", "RUF002", "RUF003",  # ambiguous-unicode in string / docstring / comment
+                                  # we use d̂, Δ, ≈, ×, em-dash on purpose
+
+  # Scientific-shorthand variable names — h/l for harmful/harmless, x for activations
+  "E741",    # ambiguous-variable-name (l, I, O)
+  "E701", "E702",  # multiple-statements-on-one-line — `if x: continue` is idiomatic
+
+  # zip(strict=...) — would catch a real class of bug but currently we have
+  # 38 instances; rather than a flag-day fix, leave as a known thing. Add
+  # back when we sweep through.
+  "B905",
+]
+
+[lint.isort]
+force-single-line = false           # research code lines up imports normally; merge-conflict risk is low at this size
+known-first-party = ["src", "experiments", "tests"]
+
+[lint.per-file-ignores]
+# Tests can use assert and have other niceties relaxed
+"tests/**" = ["S101", "B011"]
+# Experiment runners often print() final results to stdout — that's intentional
+"experiments/**" = ["T20"]
+# Memory/scratch files in /tmp — irrelevant
+"/tmp/**" = ["INP001"]

@@ -41,7 +41,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 
@@ -54,8 +53,6 @@ try:
 except ImportError:
     pass
 
-import numpy as np
-import torch
 
 from experiments._runner import (
     RESULTS,
@@ -68,7 +65,10 @@ from experiments._runner import (
     write_json,
 )
 from experiments.phase1_harmbench_eval import (
-    load_harmbench, _gen, _judge_all, summarize, wilson_ci,
+    _gen,
+    _judge_all,
+    load_harmbench,
+    summarize,
 )
 from experiments.phase1_subspace_ablation import extract_lda_top_k_orthogonal
 from src.activations import cache_resid
@@ -235,7 +235,7 @@ def _render_summary(rec):
         f"- d_hat (reference) extracted at L{rec['extract_layer']} from AdvBench",
         f"- LDA-top-1 extracted via bootstrap seed {rec['bootstrap_seed']}",
         f"- cos(LDA-top-1, d_hat) = {rec['cos_lda_with_dhat']:.4f} (near-orthogonal)",
-        f"- Evaluated on 200 HarmBench standard-behavior prompts",
+        "- Evaluated on 200 HarmBench standard-behavior prompts",
         f"- Scorer: {rec['scorer']}",
         "",
         "## Pre-registered prediction (logged before running)",
@@ -249,11 +249,11 @@ def _render_summary(rec):
         "",
         "| Direction ablated | Refusal rate (n=200) |",
         "|---|---:|",
-        f"| Baseline (no hook) | 0.990 |",
-        f"| **L13 diff-of-means d_hat** (causal) | **0.080** |",
+        "| Baseline (no hook) | 0.990 |",
+        "| **L13 diff-of-means d_hat** (causal) | **0.080** |",
         f"| **LDA-top-1, bootstrap {rec['bootstrap_seed']}** (this run) | "
         f"**{s['refusal_rate']:.3f}** |",
-        f"| Random unit vector (control) | 0.990 |",
+        "| Random unit vector (control) | 0.990 |",
         "",
     ]
     if s["refusal_rate"] >= 0.85:

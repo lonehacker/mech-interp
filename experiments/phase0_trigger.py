@@ -20,7 +20,6 @@ Side effects:
 from __future__ import annotations
 
 import argparse
-import json
 import random
 import sys
 from pathlib import Path
@@ -29,13 +28,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
+
 matplotlib.use("Agg")  # headless: write PNGs, don't pop windows
 import matplotlib.pyplot as plt
 import torch
 
 from experiments._runner import (
     ARTIFACTS_FIGURES,
-    DATA,
     RESULTS,
     cached_activations,
     content_hash,
@@ -418,7 +417,7 @@ def _render_summary(rec: dict) -> str:
         f"- Templated vs raw differ? **{not rec['sanity']['templated_vs_raw']['identical']}**",
         f"- Tokenized templated prompt shape: {rec['sanity']['bos']['ids_shape']}",
         f"- BOS assertion fires on force-fed double-BOS? **{rec['sanity']['bos']['double_bos_assertion_fires']}**",
-        f"- Activations finite (no NaN/Inf)? **True** (checked on harmful_acts, harmless_acts, d, harmful_shallow, harmless_shallow)",
+        "- Activations finite (no NaN/Inf)? **True** (checked on harmful_acts, harmless_acts, d, harmful_shallow, harmless_shallow)",
         "",
         "## What to do next",
         "- If refusal rates AND the AUC controls look right, move to the layer sweep (`experiments/phase1_step2_layer_sweep.py` — not yet written).",

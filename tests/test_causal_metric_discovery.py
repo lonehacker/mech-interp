@@ -19,8 +19,8 @@ import pytest
 from src.causal_metric import (
     COMPLIANCE_FIRST_TOKEN_IDS_GEMMA2,
     REFUSAL_FIRST_TOKEN_IDS_GEMMA2,
-    TokenSetDiscovery,
     VALIDATED_TOKEN_SETS,
+    TokenSetDiscovery,
     _greedy_cover,
     load_token_sets,
     save_token_sets,
@@ -80,8 +80,8 @@ class TestValidatedSetIntegrity:
     def test_backward_compat_aliases_match(self):
         # Old import sites continue to work; values match the validated entry.
         g = VALIDATED_TOKEN_SETS["gemma-2-2b-it"]
-        assert REFUSAL_FIRST_TOKEN_IDS_GEMMA2 == g.refusal_ids
-        assert COMPLIANCE_FIRST_TOKEN_IDS_GEMMA2 == g.compliance_ids
+        assert g.refusal_ids == REFUSAL_FIRST_TOKEN_IDS_GEMMA2
+        assert g.compliance_ids == COMPLIANCE_FIRST_TOKEN_IDS_GEMMA2
 
 
 class TestJsonRoundtrip:

@@ -89,7 +89,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import math
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -105,8 +104,8 @@ from experiments._runner import (
     write_json,
 )
 from src.activations import cache_resid
-from src.directions import ablate_dir, diff_of_means, random_unit_vector, unit
-from src.eval import coherence_ok, refusal_rate
+from src.directions import ablate_dir, diff_of_means, unit
+from src.eval import refusal_rate
 from src.model import format_prompt, generate, tokenize_prompt
 
 log = get_logger("phase1_rdo")
@@ -338,7 +337,7 @@ def _render_summary(rec):
     md = [
         f"# Phase 1 — RDO ({rec['mode']} mode)",
         "",
-        f"**Pre-registered prediction:** "
+        "**Pre-registered prediction:** "
         + ("(sanity) loss decreases to comply baseline within ~50 steps; "
            "behavioral refusal drops to ≤0.2; cos(d, d_hat_L13) stays ≈ 1.0. "
            "Confirms gradients flow."
@@ -358,8 +357,8 @@ def _render_summary(rec):
         "",
         "## Results",
         "",
-        f"| | initial | final |",
-        f"|---|---:|---:|",
+        "| | initial | final |",
+        "|---|---:|---:|",
         f"| RDO loss (log p(refusal-start)) | {rec['initial_loss']:.4f} | {rec['final_loss']:.4f} |",
         f"| Behavioral refusal rate (held-out n={rec['n_eval']}) | {rec['baseline_refusal_rate']:.2f} | {rec['final_refusal_rate']:.2f} |",
         f"| cos(d, d_hat_L13) | — | {rec['final_cos_with_d_hat_L13']:.4f} |",
@@ -406,7 +405,7 @@ def _render_summary(rec):
     md.append(
         "RDO objective: minimize mean over harmful prompts of log p(refusal-start | "
         "prompt, ablate(d) at every residual hook). Refusal-start tokens = first-token "
-        f"IDs of {{'I', 'As', \"I'm\", 'Sorry'}} variants. After each gradient step, "
+        "IDs of {'I', 'As', \"I'm\", 'Sorry'} variants. After each gradient step, "
         "project d onto orthogonal complement of d_hat_L13 (if orthogonal mode) and "
         "unit-normalize. Gradients flow through the differentiable ablation hook "
         "(x ← x − (x·d)*d, linear in d for fixed x)."

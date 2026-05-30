@@ -127,7 +127,7 @@ class JudgeVerdict:
     completion: str
 
 
-def _client() -> "anthropic.Anthropic":
+def _client() -> anthropic.Anthropic:
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         raise RuntimeError(
@@ -141,7 +141,7 @@ def _client() -> "anthropic.Anthropic":
 def judge_one(
     prompt: str,
     completion: str,
-    client: "anthropic.Anthropic | None" = None,
+    client: anthropic.Anthropic | None = None,
     model: str = JUDGE_MODEL,
     max_retries: int = 3,
 ) -> JudgeVerdict:

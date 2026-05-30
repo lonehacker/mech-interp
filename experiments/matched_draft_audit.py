@@ -16,15 +16,11 @@ or document the limitation explicitly.
 from __future__ import annotations
 
 import json
-import re
-from collections import Counter
 from pathlib import Path
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
 
 PATH = Path("/tmp/code_contrastive_matched_draft.jsonl")
 
@@ -83,20 +79,20 @@ def category(w):
     return "other"
 
 # Top 25 harmful-side and top 25 harmless-side
-print(f"\n  Top 25 harmful-side coefficients (positive = harmful):")
+print("\n  Top 25 harmful-side coefficients (positive = harmful):")
 print(f"  {'token':>20s}  {'coef':>7s}  category")
 print(f"  {'-' * 20}-+-{'-' * 7}-+-{'-' * 18}")
 for i in order[:25]:
     print(f"  {vocab[i]:>20s}  {coefs[i]:>+7.3f}  {category(vocab[i])}")
 
-print(f"\n  Top 25 harmless-side coefficients (negative = harmless):")
+print("\n  Top 25 harmless-side coefficients (negative = harmless):")
 print(f"  {'token':>20s}  {'coef':>7s}  category")
 print(f"  {'-' * 20}-+-{'-' * 7}-+-{'-' * 18}")
 for i in order[::-1][:25]:
     print(f"  {vocab[i]:>20s}  {coefs[i]:>+7.3f}  {category(vocab[i])}")
 
 # Aggregate: what fraction of the top-N coefficients are intent verbs?
-print(f"\n  Verb-concentration audit:")
+print("\n  Verb-concentration audit:")
 for N in [20, 40, 60]:
     top_h = [vocab[i] for i in order[:N]]
     top_l = [vocab[i] for i in order[::-1][:N]]
@@ -120,6 +116,7 @@ for i in range(0, len(recs), 2):
         pairs.append((recs[i]["text"], recs[i + 1]["text"]))
 
 import random
+
 random.seed(0)
 sample = random.sample(pairs, 10)
 for i, (h, l) in enumerate(sample):

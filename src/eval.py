@@ -22,7 +22,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 # Strict refusal PREFIXES — must appear at the start of the stripped, lowercased
 # generation. Anchor the cleanest "I cannot ..." refusals.
 REFUSAL_PREFIXES: tuple[str, ...] = (

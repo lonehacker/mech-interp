@@ -17,9 +17,8 @@ from __future__ import annotations
 
 import json
 import re
-import statistics
 from collections import Counter
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -74,7 +73,7 @@ def _pct(xs: list[int], p: float) -> float:
     return float(s[k])
 
 
-def _audit_split(name: str, prompts: list[str], bundle: "ModelBundle | None") -> SplitAudit:
+def _audit_split(name: str, prompts: list[str], bundle: ModelBundle | None) -> SplitAudit:
     chars = [len(p) for p in prompts]
 
     if bundle is not None:
@@ -121,7 +120,7 @@ def _audit_split(name: str, prompts: list[str], bundle: "ModelBundle | None") ->
 
 def audit_contrastive(
     path: str | Path,
-    bundle: "ModelBundle | None" = None,
+    bundle: ModelBundle | None = None,
 ) -> ContrastiveAudit:
     """Audit the frozen contrastive set at `path`.
 

@@ -29,13 +29,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
 from experiments._runner import (
-    ARTIFACTS_FIGURES,
     RESULTS,
     cached_activations,
     content_hash,
@@ -320,7 +318,7 @@ def main() -> int:
     log.info("summary -> %s", md_path)
 
     # Headline console output
-    print(f"\n=== Phase 2 Step 3e — matched-set causal sweep ===")
+    print("\n=== Phase 2 Step 3e — matched-set causal sweep ===")
     print(f"d̂_matched at L{args.extract_layer} | natural scale = {nat_scale_matched:.3f}")
     print(f"cos(d̂_matched, d̂_old from code_contrastive) = {cos_old_new:.4f}")
     print(f"\nAblation (n={len(h_test_m)} held-out matched-harmful):")
@@ -384,8 +382,8 @@ def _render_summary(rec):
         md.append(f"## Specificity control (random at {sc['cell']}):")
         md.append(f"- Substring refusal: {sc['refusal_rate_substr']:.3f}, lift {sc['lift_vs_baseline_substr']:+.3f}")
         md.append("")
-    md.append(f"Per-prompt completions in `artifacts/runs/phase2_step3e/<timestamp>/result.json`.")
-    md.append(f"Pre-registration: `results/phase2_step3e_preregistration.md`.")
+    md.append("Per-prompt completions in `artifacts/runs/phase2_step3e/<timestamp>/result.json`.")
+    md.append("Pre-registration: `results/phase2_step3e_preregistration.md`.")
     return "\n".join(md) + "\n"
 
 

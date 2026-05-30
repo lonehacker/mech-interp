@@ -50,7 +50,7 @@ print("CHECK 1 — Vocabulary classifier (TF-IDF unigram LR)")
 print("=" * 70)
 print("PRIMARY:    5-fold StratifiedKFold(shuffle, random_state=0); vectorizer fit on train only")
 print("DIAGNOSTIC: single 70/30 stratified split (random_state=0)")
-print(f"LR: max_iter=2000, C=1.0, solver='liblinear'  Vec: ngram_range=(1,1), lowercase=True\n")
+print("LR: max_iter=2000, C=1.0, solver='liblinear'  Vec: ngram_range=(1,1), lowercase=True\n")
 
 primary_min_df = 2
 results = {}
@@ -88,15 +88,15 @@ print(f"  min_df=2 (PRIMARY): common-vocabulary CV AUC = {m2:.4f}")
 print(f"      Gate (CV mean within 0.5 ± 0.15): {'PASS' if abs(m2 - 0.5) < 0.15 else 'FAIL'}")
 print(f"  min_df=1 sensitivity: includes singleton tokens, CV AUC = {m1:.4f}")
 if m1 < 0.4:
-    print(f"      Below chance: paired-set CV ARTIFACT (rare tokens like CVE names appear in")
-    print(f"      exactly 2 prompts — one per label — and CV splits pair members across folds,")
-    print(f"      so the LR is always wrong on rare-token test prompts). NOT evidence of")
-    print(f"      residual separability.")
+    print("      Below chance: paired-set CV ARTIFACT (rare tokens like CVE names appear in")
+    print("      exactly 2 prompts — one per label — and CV splits pair members across folds,")
+    print("      so the LR is always wrong on rare-token test prompts). NOT evidence of")
+    print("      residual separability.")
 elif m1 > 0.6:
-    print(f"      Above chance — singleton tokens carry residual signal. Narrows the claim:")
-    print(f"      common vocabulary at chance, rare tokens still separate.")
+    print("      Above chance — singleton tokens carry residual signal. Narrows the claim:")
+    print("      common vocabulary at chance, rare tokens still separate.")
 else:
-    print(f"      Also near chance — vocabulary doesn't classify at either filter setting.")
+    print("      Also near chance — vocabulary doesn't classify at either filter setting.")
 
 # ===================================================================
 # CHECK 2 — Length distribution

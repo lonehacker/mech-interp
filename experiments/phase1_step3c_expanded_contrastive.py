@@ -29,7 +29,6 @@ Run:
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -207,7 +206,7 @@ def _render(rec):
         "coverage gap in the original contrastive set.",
         "",
         f"- canonical d_hat extracted from L{rec['layer']} on {rec['canonical_set_size']['harmful']} harmful / {rec['canonical_set_size']['harmless']} harmless",
-        f"- expanded d_hat adds 3 fictional-framing jailbreak prompts to the harmful side, plus 3 length-matched harmless",
+        "- expanded d_hat adds 3 fictional-framing jailbreak prompts to the harmful side, plus 3 length-matched harmless",
         f"- cos(canonical, expanded) = **{rec['cosine_canonical_expanded']:.3f}** (if ≈1.0, expansion barely shifted the direction)",
         "",
         "## Headline",

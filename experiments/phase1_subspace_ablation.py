@@ -68,7 +68,6 @@ import torch
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from experiments._runner import (
-    ARTIFACTS_CACHE,
     RESULTS,
     cached_activations,
     content_hash,

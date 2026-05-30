@@ -21,12 +21,11 @@ import json
 import re
 import sys
 from collections import Counter
-from pathlib import Path
 
 sys.path.insert(0, "/Users/anshulsinghle/safe_ai/mech-security")
 
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
@@ -61,13 +60,13 @@ def main():
     stop = {"a", "the", "to", "of", "for", "in", "on", "and", "or", "is", "that",
             "with", "by", "as", "an", "be", "have", "from", "it", "this", "are"}
 
-    print(f"\n  Top 15 harmful-side words (ex stopwords):")
+    print("\n  Top 15 harmful-side words (ex stopwords):")
     for w, c in h_tokens.most_common():
         if w in stop: continue
         print(f"    {w:>20s}  {c:>4d}  (harmless: {l_tokens.get(w, 0)})")
         if not [w for w, c in h_tokens.most_common() if w not in stop][:15].index(w) < 14:
             break
-    print(f"\n  Top 15 harmless-side words (ex stopwords):")
+    print("\n  Top 15 harmless-side words (ex stopwords):")
     seen = 0
     for w, c in l_tokens.most_common():
         if w in stop or seen >= 15: continue

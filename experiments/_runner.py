@@ -17,7 +17,7 @@ import hashlib
 import json
 import logging
 import os
-from dataclasses import dataclass, asdict, is_dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +30,7 @@ os.environ.setdefault("TRANSFORMERLENS_ALLOW_MPS", "1")
 import torch
 
 # Late-imported to keep import overhead off scripts that only want paths.
-_BUNDLE: "object | None" = None
+_BUNDLE: object | None = None
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = REPO_ROOT / "artifacts"

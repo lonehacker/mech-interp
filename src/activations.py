@@ -1,28 +1,59 @@
-"""
-Residual-stream caching at the last token position.
+"""Cache residual-stream activations at the LAST token of each templated prompt.
 
-The runbook fixes one choice: cache `hook_resid_post` at the LAST token of each
-templated prompt. Position is fixed because (a) refusal-direction work in the
-literature operates on the final token's residual and (b) varying the position
-silently introduces an extra dimension we'd then have to confound-audit.
+See HOW_IT_WORKS.md §3 for why we read at `hook_resid_post` and at the last
+token position. Both choices are fixed by the runbook: changing either
+introduces a free hyperparameter the rest of the project would have to
+confound-audit.
 
-Function shape: activations in, tensors out. No analysis here.
+Returns are CPU fp32 tensors — Phase 1 caches are small (n × 2304 floats
+≈ MB) and downstream math (sklearn, plotting) lives on CPU.
 """
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Callable, Iterable
 
 import torch
 from tqdm.auto import tqdm
-
-from typing import Callable
 
 from .model import ModelBundle, format_prompt, tokenize_prompt
 
 
 def _resid_hook_name(layer: int) -> str:
     return f"blocks.{layer}.hook_resid_post"
+
+
+@torch.no_grad()
+def _cache_at_hooks(
+    bundle: ModelBundle,
+    prompts: Iterable[str],
+    hook_names: list[str],
+    *,
+    apply_template: bool,
+    show_progress: bool,
+    format_fn: Callable[[str], str] | None,
+    desc: str,
+) -> list[torch.Tensor]:
+    """Run a forward pass per prompt; return last-token activation per hook.
+
+    Returns a list of length n_prompts, each entry [n_hooks, d_model] on CPU fp32.
+    """
+    if format_fn is None:
+        format_fn = format_prompt
+    iterator = tqdm(list(prompts), desc=desc) if show_progress else prompts
+    out: list[torch.Tensor] = []
+    for raw in iterator:
+        if apply_template:
+            text = format_fn(raw)
+            ids = tokenize_prompt(bundle, text)
+        else:
+            ids = bundle.model.to_tokens(raw)
+        _, cache = bundle.model.run_with_cache(ids, names_filter=hook_names, return_type=None)
+        per_hook = torch.stack(
+            [cache[h][0, -1].detach().to("cpu").float() for h in hook_names], dim=0
+        )  # [n_hooks, d_model]
+        out.append(per_hook)
+    return out
 
 
 @torch.no_grad()
@@ -34,47 +65,22 @@ def cache_resid(
     show_progress: bool = True,
     format_fn: Callable[[str], str] | None = None,
 ) -> torch.Tensor:
-    """Cache residual-stream activations at the last token of each prompt.
+    """Cache last-token resid_post activations at ONE layer.
 
-    Parameters
-    ----------
-    bundle: loaded model + metadata.
-    prompts: raw user messages; templated inside this function unless
-        apply_template=False (only useful for the Phase 0 sanity check).
-    layer: block index; activation read from blocks.{layer}.hook_resid_post.
-    format_fn: optional override for prompt templating. Default = `format_prompt`
-        (Gemma). For Phase 2 / Qwen / any non-Gemma model, pass
-        `lambda msg: format_prompt_for_bundle(bundle, msg)`.
+    Returns [n_prompts, d_model] on CPU.
 
-    Returns
-    -------
-    Tensor of shape [n_prompts, d_model] on CPU. CPU because Phase 1 caches
-    are small and downstream ops (sklearn, plotting) live on CPU.
+    format_fn defaults to Gemma `format_prompt`. For Qwen / Phase 2 / any
+    non-Gemma model, pass `lambda m: format_prompt_for_bundle(bundle, m)`.
     """
     if layer < 0 or layer >= bundle.n_layers:
         raise ValueError(f"layer {layer} out of range [0, {bundle.n_layers})")
-    if format_fn is None:
-        format_fn = format_prompt
-
-    hook_name = _resid_hook_name(layer)
-    out: list[torch.Tensor] = []
-
-    iterator = tqdm(list(prompts), desc=f"cache L{layer}") if show_progress else prompts
-
-    for raw in iterator:
-        text = format_fn(raw) if apply_template else raw
-        ids = tokenize_prompt(bundle, text) if apply_template else bundle.model.to_tokens(text)
-        _, cache = bundle.model.run_with_cache(
-            ids,
-            names_filter=[hook_name],
-            return_type=None,
-        )
-        # cache[hook_name] is [1, seq_len, d_model]; last token is the final
-        # position of the templated prompt.
-        last = cache[hook_name][0, -1].detach().to("cpu").float()
-        out.append(last)
-
-    return torch.stack(out, dim=0)
+    per_hook_list = _cache_at_hooks(
+        bundle, prompts, [_resid_hook_name(layer)],
+        apply_template=apply_template, show_progress=show_progress,
+        format_fn=format_fn, desc=f"cache L{layer}",
+    )
+    # squeeze hook dim — only 1 hook
+    return torch.stack([p[0] for p in per_hook_list], dim=0)
 
 
 @torch.no_grad()
@@ -85,37 +91,15 @@ def cache_resid_all_layers(
     show_progress: bool = True,
     format_fn: Callable[[str], str] | None = None,
 ) -> torch.Tensor:
-    """Same as cache_resid but stacked across every layer in one forward pass.
+    """Same as cache_resid but caches every layer in one forward pass.
 
-    `format_fn` works identically to cache_resid — default Gemma, pass
-    `lambda msg: format_prompt_for_bundle(bundle, msg)` for other models.
-
-    Returns
-    -------
-    Tensor of shape [n_prompts, n_layers, d_model] on CPU. Used for the layer
-    sweep (Step 2) so we only forward each prompt once.
+    Returns [n_prompts, n_layers, d_model] on CPU. Used by the layer-sweep
+    experiment so each prompt is forwarded once instead of n_layers times.
     """
-    if format_fn is None:
-        format_fn = format_prompt
-
-    n_layers = bundle.n_layers
-    hook_names = [_resid_hook_name(L) for L in range(n_layers)]
-    out: list[torch.Tensor] = []
-
-    iterator = tqdm(list(prompts), desc="cache all layers") if show_progress else prompts
-
-    for raw in iterator:
-        text = format_fn(raw) if apply_template else raw
-        ids = tokenize_prompt(bundle, text) if apply_template else bundle.model.to_tokens(text)
-        _, cache = bundle.model.run_with_cache(
-            ids,
-            names_filter=hook_names,
-            return_type=None,
-        )
-        per_layer = torch.stack(
-            [cache[h][0, -1].detach().to("cpu").float() for h in hook_names],
-            dim=0,
-        )  # [n_layers, d_model]
-        out.append(per_layer)
-
-    return torch.stack(out, dim=0)  # [n, n_layers, d_model]
+    hook_names = [_resid_hook_name(L) for L in range(bundle.n_layers)]
+    per_hook_list = _cache_at_hooks(
+        bundle, prompts, hook_names,
+        apply_template=apply_template, show_progress=show_progress,
+        format_fn=format_fn, desc="cache all layers",
+    )
+    return torch.stack(per_hook_list, dim=0)  # [n, n_layers, d_model]

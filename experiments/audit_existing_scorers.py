@@ -7,8 +7,11 @@ Run:
     zsh -c 'source ~/.zshrc && python -m experiments.audit_existing_scorers'
 """
 from __future__ import annotations
-import json, sys
+
+import json
+import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.eval_llm import _client, judge_one
 

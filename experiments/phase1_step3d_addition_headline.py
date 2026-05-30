@@ -337,9 +337,9 @@ def _render_summary(rec: dict) -> str:
         f"- Random direction class-separation at L{inj}: {s_rnd['natural_scale']:.3f} "
         f"(should be ≈ 0 — random unit vector does not separate classes)",
         "",
-        f"_Phase 2 will compute these per-layer scales on the target model and use "
-        f"them as the coefficient unit. Absolute coeffs are not portable; "
-        f"natural-scale multiples are._",
+        "_Phase 2 will compute these per-layer scales on the target model and use "
+        "them as the coefficient unit. Absolute coeffs are not portable; "
+        "natural-scale multiples are._",
         "",
         "## Baseline",
         "",

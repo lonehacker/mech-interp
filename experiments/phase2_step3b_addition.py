@@ -39,7 +39,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import torch
 
 from experiments._runner import (
     RESULTS,
@@ -47,7 +46,6 @@ from experiments._runner import (
     content_hash,
     get_logger,
     get_model,
-    load_jsonl_pairs,
     new_run_dir,
     write_json,
 )
@@ -221,17 +219,17 @@ def main() -> int:
 
     print(f"\n=== phase2_step3b_addition: {bundle.name} ===")
     print(f"  Inject L{args.inject_layer}, coeff={coeff:.2f} ({args.coeff_mult}× L{args.peak_layer} natural scale {natural_scale:.1f})")
-    print(f"  Substring scorer (n=30 harmless test):")
+    print("  Substring scorer (n=30 harmless test):")
     for n in ["baseline", "add_dhat", "add_random"]:
         print(f"    {n:<15s} refusal {substr_rates[n]:.3f}")
     if judge_summary:
-        print(f"  LLM judge:")
+        print("  LLM judge:")
         for n in ["baseline", "add_dhat", "add_random"]:
             r = judge_summary[n]
             print(f"    {n:<15s} refusal {r['refusal_rate']:.3f} ({r['n_refused']}/{len(harmless_test)})")
     print(f"\n  Induced-refusal lift (substr): add d̂  Δ = {delta_dhat:+.3f}")
     print(f"                                 add rand Δ = {delta_random:+.3f}")
-    print(f"  Specificity: d̂ lift should be MUCH larger than random lift if d̂ causally controls refusal.")
+    print("  Specificity: d̂ lift should be MUCH larger than random lift if d̂ causally controls refusal.")
     return 0
 
 
@@ -262,7 +260,7 @@ def _render_summary(rec):
             r = rec["judge_summary"][n]
             md.append(f"| {n} | {r['refusal_rate']:.3f} | {r['n_refused']} / {rec['n_test']} |")
         md.append("")
-    md.append(f"Per-prompt completions in `artifacts/runs/phase2_step3b/<timestamp>/result.json`.")
+    md.append("Per-prompt completions in `artifacts/runs/phase2_step3b/<timestamp>/result.json`.")
     return "\n".join(md) + "\n"
 
 

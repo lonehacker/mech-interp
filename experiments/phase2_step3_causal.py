@@ -38,7 +38,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import torch
 
 from experiments._runner import (
     RESULTS,
@@ -46,11 +45,10 @@ from experiments._runner import (
     content_hash,
     get_logger,
     get_model,
-    load_jsonl_pairs,
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid, cache_resid_all_layers
+from src.activations import cache_resid
 from src.directions import ablate_dir, diff_of_means, random_unit_vector, unit
 from src.eval import is_refusal
 from src.model import format_prompt_for_bundle, generate
@@ -250,17 +248,17 @@ def main() -> int:
 
     print(f"\n=== phase2_step3_causal: {bundle.name} @ L{args.peak_layer} ===")
     print(f"  Split: {len(harmful_train)} train / {len(harmful_test)} test (seed={args.split_seed})")
-    print(f"  Substring scorer:")
+    print("  Substring scorer:")
     for n in ["baseline", "ablate_dhat", "ablate_random"]:
         print(f"    {n:<15s} refusal {substr_rates[n]:.3f}")
     if judge_summary:
-        print(f"  LLM judge (Haiku 4.5):")
+        print("  LLM judge (Haiku 4.5):")
         for n in ["baseline", "ablate_dhat", "ablate_random"]:
             r = judge_summary[n]
             print(f"    {n:<15s} refusal {r['refusal_rate']:.3f} ({r['n_refused']}/{len(harmful_test)})")
     print(f"\n  Headline (substring): baseline → ablate_d̂ drop = {-delta_dhat:+.3f}")
     print(f"                        baseline → ablate_random drop = {-delta_random:+.3f}")
-    print(f"  Specificity: d̂ drop should be MUCH larger (absolute value) than random drop.")
+    print("  Specificity: d̂ drop should be MUCH larger (absolute value) than random drop.")
     return 0
 
 
@@ -269,7 +267,7 @@ def _render_summary(rec):
         f"# Phase 2 Step 3 — causal test ({rec['model']}, L{rec['peak_layer']})",
         "",
         f"- Split: {rec['n_train']} train / {rec['n_test']} test (seed {rec['split_seed']})",
-        f"- Test source breakdown:",
+        "- Test source breakdown:",
     ]
     from collections import Counter
     src_counts = Counter(r["source"] for r in rec["test_meta"])
@@ -308,7 +306,7 @@ def _render_summary(rec):
         src = r["source"].replace("harmbench_cybercrime", "HB-cyber").replace("advbench_code", "ADV-code")
         md.append(f"| {r['idx']} | {src} | {short}... | {b[:3]} | {ad[:3]} | {ar[:3]} |")
     md.append("")
-    md.append(f"Per-prompt completions in `artifacts/runs/phase2_step3/<timestamp>/result.json`.")
+    md.append("Per-prompt completions in `artifacts/runs/phase2_step3/<timestamp>/result.json`.")
     return "\n".join(md) + "\n"
 
 

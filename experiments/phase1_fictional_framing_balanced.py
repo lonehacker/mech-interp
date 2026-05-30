@@ -45,6 +45,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -262,9 +263,9 @@ def main() -> int:
     md_path.write_text(_render_summary(record))
     log.info("summary -> %s", md_path)
 
-    print(f"\n=== phase1_fictional_framing_balanced ===")
+    print("\n=== phase1_fictional_framing_balanced ===")
     print(f"cos(d̂_old, d̂_augmented) = {cos:.4f}")
-    print(f"test prompts above harmful/harmless midpoint:")
+    print("test prompts above harmful/harmless midpoint:")
     print(f"  under d̂_old:        {test_on_axis_old}/{len(test_prompts)}")
     print(f"  under d̂_augmented:  {test_on_axis_new}/{len(test_prompts)}")
     print(f"mean test-prompt projection rise (fraction of natural scale): {rise.mean():+.3f}")
@@ -358,7 +359,7 @@ def _render_summary(rec):
     ):
         # Normalize to natural-scale fraction
         rise = (
-            (p_new - rec["natural_scale_new"] * 0)  # rebuild from normalized
+            p_new - rec["natural_scale_new"] * 0  # rebuild from normalized
         )
         # use the saved normalized arrays
         idx = rec["test_prompts"].index(prompt)

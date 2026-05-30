@@ -1,60 +1,49 @@
-"""
-Refusal-direction extraction + ablation/addition hooks.
+"""Refusal-direction extraction + ablation/addition hooks.
 
-Method: difference-in-means refusal direction (Arditi et al., "Refusal in
-Language Models Is Mediated by a Single Direction"). One vector, one layer.
+See HOW_IT_WORKS.md §4 (diff-of-means math) and §6-7 (ablate/add hooks).
 
-Two interventions, both as context managers (so a `with` block guarantees the
-hooks are removed even on exception):
+Public API:
+  diff_of_means(H, L)             -> Tensor[d_model]    H - L cluster centroids
+  unit(v)                          -> Tensor[d_model]    v / ||v||, asserts non-zero
+  project(acts, d_hat)             -> Tensor[n]          acts @ d_hat
+  random_unit_vector(d, seed)      -> Tensor[d]          for specificity controls
+  ablate_dir(model, d_hat)         -> contextmanager     all-layer projection-out
+  add_dir(model, d_hat, coeff, L)  -> contextmanager     single-layer addition
 
-- ablate_dir: project the residual stream onto the orthogonal complement of
-  d_hat at EVERY residual hook (incl. attn_out, mlp_out for the faithful
-  variant). Expected effect on harmful prompts: refusal rate drops.
-- add_dir: add coeff * d_hat at the residual stream of a specific layer.
-  Expected effect on harmless prompts: over-refusal appears.
-
-NEVER summarize an intervention's effect as positive/negative here. This
-module produces tensors. Interpretation happens in notebooks under human eyes.
+Function shape: tensors in, tensors / contexts out. NEVER interpret an
+intervention's effect as positive/negative here — that belongs in
+experiments/ runners under human eyes.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
 import torch
 from transformer_lens import HookedTransformer
 from transformer_lens.hook_points import HookPoint
 
+# Residual-affecting hook points. The faithful Arditi-style ablation hits
+# all five per layer: subtracting at resid_post alone leaves the direction
+# reachable through the next block's attention reads (which read resid_pre).
+_FAITHFUL_HOOK_SUFFIXES = (
+    "hook_resid_pre", "hook_resid_mid", "hook_resid_post",
+    "hook_attn_out", "hook_mlp_out",
+)
 
-# Residual-affecting hook points we ablate at, for the "faithful" Arditi-style
-# variant. Subtracting from hook_resid_post alone leaves the direction
-# reachable via the per-component reads — ablating at attn_out and mlp_out as
-# well closes that loop.
-_FAITHFUL_HOOK_SUFFIXES = ("hook_resid_pre", "hook_resid_mid", "hook_resid_post",
-                            "hook_attn_out", "hook_mlp_out")
 
-
-def diff_of_means(
-    harmful_acts: torch.Tensor,
-    harmless_acts: torch.Tensor,
-) -> torch.Tensor:
-    """Compute the (un-normalized) diff-of-means direction.
-
-    Inputs are [n, d_model]; output is [d_model]. Caller normalizes if they
-    want d_hat — kept separate so both the raw and the unit vector are
-    available for diagnostics.
-    """
+def diff_of_means(harmful_acts: torch.Tensor, harmless_acts: torch.Tensor) -> torch.Tensor:
+    """mean(harmful) - mean(harmless). Inputs [n, d_model], output [d_model]."""
     if harmful_acts.shape[1] != harmless_acts.shape[1]:
         raise ValueError(
-            f"d_model mismatch: harmful {harmful_acts.shape} vs "
-            f"harmless {harmless_acts.shape}"
+            f"d_model mismatch: harmful {harmful_acts.shape} vs harmless {harmless_acts.shape}"
         )
     return harmful_acts.mean(dim=0) - harmless_acts.mean(dim=0)
 
 
 def unit(vec: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
-    """Return vec / ||vec||, with eps guard for the degenerate all-zero case."""
+    """v / ||v||. Raises rather than silently returning zero on a near-zero input."""
     norm = vec.norm()
     if norm.item() < eps:
         raise ValueError("Cannot normalize a near-zero vector.")
@@ -62,12 +51,31 @@ def unit(vec: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
 
 
 def project(acts: torch.Tensor, d_hat: torch.Tensor) -> torch.Tensor:
-    """Scalar projection of each activation onto d_hat. Returns [n] tensor."""
+    """Scalar projection: acts @ d_hat. Inputs [n, d], [d]; output [n]."""
     return acts @ d_hat
+
+
+def random_unit_vector(d_model: int, seed: int, device: str = "cpu") -> torch.Tensor:
+    """Seeded random unit vector for specificity controls.
+
+    Matched norm is the point: a random vector of *different* norm would test
+    "any perturbation of this magnitude" rather than "any direction".
+    """
+    g = torch.Generator(device=device).manual_seed(seed)
+    v = torch.randn(d_model, generator=g, device=device)
+    return v / v.norm()
 
 
 def _is_residual_hook(name: str) -> bool:
     return any(name.endswith(s) for s in _FAITHFUL_HOOK_SUFFIXES)
+
+
+def _validate_unit_and_prep(d_hat: torch.Tensor, model: HookedTransformer) -> torch.Tensor:
+    """Assert d_hat is unit-norm; move to model device/dtype."""
+    norm = d_hat.norm().item()
+    if abs(norm - 1.0) > 1e-3:
+        raise ValueError(f"expected unit vector, got ||d_hat||={norm:.4f}")
+    return d_hat.to(model.cfg.device, dtype=model.W_E.dtype)
 
 
 @contextmanager
@@ -76,40 +84,30 @@ def ablate_dir(
     d_hat: torch.Tensor,
     layers: list[int] | None = None,
 ) -> Iterator[None]:
-    """Context manager that ablates the d_hat component from every residual-
-    affecting hook for the duration of the block.
+    """Project d_hat out of every residual-affecting hook for the `with` block.
 
-    Parameters
-    ----------
-    layers: if None, ablate at every layer (the standard Arditi recipe). If a
-        list, ablate only at those layer indices — used in Step 5 for the
-        layer-restricted localization sweep.
+    At each hook:  x ← x - (x · d_hat) * d_hat   (orthogonal projection).
 
-    Semantics: at each hook, x ← x - (x @ d_hat) * d_hat. d_hat MUST be a unit
-    vector; we assert this rather than re-normalize so an unnormalized input
-    is loud, not silent.
+    layers=None → ablate at every layer (standard Arditi recipe).
+    layers=[L]  → single-layer ablation (used by the localization sweep).
+
+    d_hat MUST be a unit vector; we raise rather than re-normalize so a
+    miscalibrated caller is loud, not silent.
     """
-    norm = d_hat.norm().item()
-    if abs(norm - 1.0) > 1e-3:
-        raise ValueError(f"ablate_dir expects a unit vector, got ||d_hat||={norm:.4f}")
-
-    d_hat_dev = d_hat.to(model.cfg.device, dtype=model.W_E.dtype)
-
+    d_hat_dev = _validate_unit_and_prep(d_hat, model)
     layer_set = set(layers) if layers is not None else None
 
     def hook_fn(x: torch.Tensor, hook: HookPoint) -> torch.Tensor:
-        # x: [..., d_model]. Last dim is d_model regardless of which residual
-        # hook we're at.
-        coeff = (x * d_hat_dev).sum(dim=-1, keepdim=True)
-        return x - coeff * d_hat_dev
+        # x: [..., d_model] — last dim is d_model at every residual hook
+        coeff = (x * d_hat_dev).sum(dim=-1, keepdim=True)   # [..., 1]
+        return x - coeff * d_hat_dev                         # [..., d_model]
 
-    hooks: list[tuple[str, callable]] = []
-    for L in range(model.cfg.n_layers):
-        if layer_set is not None and L not in layer_set:
-            continue
-        for suffix in _FAITHFUL_HOOK_SUFFIXES:
-            hooks.append((f"blocks.{L}.{suffix}", hook_fn))
-
+    hooks = [
+        (f"blocks.{L}.{suffix}", hook_fn)
+        for L in range(model.cfg.n_layers)
+        if layer_set is None or L in layer_set
+        for suffix in _FAITHFUL_HOOK_SUFFIXES
+    ]
     with model.hooks(fwd_hooks=hooks):
         yield
 
@@ -122,38 +120,24 @@ def add_dir(
     layer: int,
     hook_suffix: str = "hook_resid_post",
 ) -> Iterator[None]:
-    """Context manager that adds coeff * d_hat at one layer's residual hook.
+    """Add coeff * d_hat at one layer's residual hook for the `with` block.
 
-    Used to test the second leg of the causal claim: if d_hat really mediates
-    refusal, then INJECTING it into the residual on harmless prompts should
-    induce refusals.
+    At hook:  x ← x + coeff * d_hat.
 
-    coeff units are in residual-stream norm; typical sweeps cover ~0 to 10×
-    the harmful-mean projection.
+    Used to test the bidirectional causal claim: if d_hat mediates refusal,
+    INJECTING it into the residual on harmless prompts should induce refusals.
+
+    coeff is in residual-stream-norm units — typical sweeps cover ~0–10×
+    the harmful-mean projection at the EXTRACTION layer (NOT the injection
+    layer; see HOW_IT_WORKS.md §7).
     """
-    norm = d_hat.norm().item()
-    if abs(norm - 1.0) > 1e-3:
-        raise ValueError(f"add_dir expects a unit vector, got ||d_hat||={norm:.4f}")
     if layer < 0 or layer >= model.cfg.n_layers:
         raise ValueError(f"layer {layer} out of range [0, {model.cfg.n_layers})")
-
-    d_hat_dev = d_hat.to(model.cfg.device, dtype=model.W_E.dtype)
+    d_hat_dev = _validate_unit_and_prep(d_hat, model)
     add_vec = coeff * d_hat_dev
 
     def hook_fn(x: torch.Tensor, hook: HookPoint) -> torch.Tensor:
         return x + add_vec
 
-    hook_name = f"blocks.{layer}.{hook_suffix}"
-    with model.hooks(fwd_hooks=[(hook_name, hook_fn)]):
+    with model.hooks(fwd_hooks=[(f"blocks.{layer}.{hook_suffix}", hook_fn)]):
         yield
-
-
-def random_unit_vector(d_model: int, seed: int, device: str = "cpu") -> torch.Tensor:
-    """Generate a random unit vector matching the d_hat shape, for the random-
-    direction control (Step 3, Control 1). The matched norm is critical — a
-    random vector of *different* norm would test "any perturbation of this
-    size", not "any direction at this norm".
-    """
-    g = torch.Generator(device=device).manual_seed(seed)
-    v = torch.randn(d_model, generator=g, device=device)
-    return v / v.norm()

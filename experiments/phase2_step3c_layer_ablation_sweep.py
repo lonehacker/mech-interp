@@ -38,7 +38,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import torch
 
 from experiments._runner import (
     RESULTS,
@@ -133,13 +132,13 @@ def main() -> int:
         log.info("  caching residuals (train+harmless) at L%d ...", L)
         H_train = cached_activations(
             key_ht,
-            lambda: cache_resid(bundle, harmful_train, layer=L,
-                                show_progress=False, format_fn=fmt),
+            lambda L=L: cache_resid(bundle, harmful_train, layer=L,
+                                    show_progress=False, format_fn=fmt),
         )
         L_full = cached_activations(
             key_l,
-            lambda: cache_resid(bundle, harmless, layer=L,
-                                show_progress=False, format_fn=fmt),
+            lambda L=L: cache_resid(bundle, harmless, layer=L,
+                                    show_progress=False, format_fn=fmt),
         )
         d_hat = unit(diff_of_means(H_train, L_full))
         log.info("  d_hat extracted from L%d | shape=%s", L, tuple(d_hat.shape))
@@ -217,8 +216,8 @@ def main() -> int:
     print(f"  baseline substring: {substr_rates['baseline']:.3f}")
     if judge_summary:
         print(f"  baseline judge:     {judge_summary['baseline']['refusal_rate']:.3f}")
-    print(f"\n  Extraction layer | substr refusal | judge refusal | Δ judge vs baseline")
-    print(f"  -----------------|----------------|----------------|---------------------")
+    print("\n  Extraction layer | substr refusal | judge refusal | Δ judge vs baseline")
+    print("  -----------------|----------------|----------------|---------------------")
     for L in args.layers:
         cell = f"ablate_dhat_L{L}"
         s = substr_rates[cell]
@@ -227,7 +226,7 @@ def main() -> int:
         j_str = f"{j:.3f}" if j is not None else "—"
         print(f"  L{L:<3d}            |  {s:.3f}         |  {j_str}        |  {delta:+.3f}")
     print(f"\n  Best layer: L{best_layer} with judge-Δ = {best_drop:+.3f}")
-    print(f"  (Phase 1 Gemma reference: L13 ablation gave Δ ≈ -0.83 on N=12, -0.91 on N=200 HarmBench.)")
+    print("  (Phase 1 Gemma reference: L13 ablation gave Δ ≈ -0.83 on N=12, -0.91 on N=200 HarmBench.)")
     return 0
 
 
@@ -258,7 +257,7 @@ def _render_summary(rec):
     md.append("")
     md.append(f"**Best extraction layer: L{rec['best_extraction_layer']}** with judge-Δ = {rec['best_drop_judge']:+.3f}.")
     md.append("")
-    md.append(f"Per-prompt completions in `artifacts/runs/phase2_step3c/<timestamp>/result.json`.")
+    md.append("Per-prompt completions in `artifacts/runs/phase2_step3c/<timestamp>/result.json`.")
     return "\n".join(md) + "\n"
 
 

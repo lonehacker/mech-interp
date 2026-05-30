@@ -26,7 +26,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
-import torch
 from sklearn.metrics import roc_auc_score
 
 from experiments._runner import (
@@ -131,7 +130,7 @@ def main() -> int:
     print(f"\n=== Random unit vector AUC (5 seeds) at L{L} on {bundle.name} ===")
     print(f"  AdvBench:  mean={s_adv['mean']:.4f}  std={s_adv['std']:.4f}  range=[{s_adv['min']:.4f}, {s_adv['max']:.4f}]")
     print(f"  HarmBench: mean={s_hb['mean']:.4f}  std={s_hb['std']:.4f}  range=[{s_hb['min']:.4f}, {s_hb['max']:.4f}]")
-    print(f"  (previously §3 reported single-seed: AdvBench 0.611, HarmBench 0.533)")
+    print("  (previously §3 reported single-seed: AdvBench 0.611, HarmBench 0.533)")
     return 0
 
 

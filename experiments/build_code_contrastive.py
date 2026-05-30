@@ -206,7 +206,7 @@ def main() -> int:
 
     # 4. Quick stats
     harmless_lens = sorted(len(r["text"]) for r in harmless)
-    print(f"\n=== code_contrastive.jsonl ===")
+    print("\n=== code_contrastive.jsonl ===")
     print(f"  harmful:  {len(harmful)} | char len median={harm_lens[len(harm_lens)//2]}, "
           f"range=[{harm_lens[0]}, {harm_lens[-1]}]")
     print(f"  harmless: {len(harmless)} | char len median={harmless_lens[len(harmless_lens)//2]}, "
@@ -215,10 +215,10 @@ def main() -> int:
     print(f"  → {OUT}")
 
     # 5. Spot-sample a few
-    print(f"\n  Harmful samples:")
+    print("\n  Harmful samples:")
     for r in random.sample(harmful, min(3, len(harmful))):
         print(f"    [{r['source']}] {r['text'][:110]}")
-    print(f"  Harmless samples:")
+    print("  Harmless samples:")
     for r in random.sample(harmless, min(3, len(harmless))):
         print(f"    [{r['source']}] {r['text'][:110]}")
     return 0

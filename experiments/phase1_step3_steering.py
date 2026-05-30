@@ -29,9 +29,7 @@ Run:
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -40,7 +38,6 @@ import numpy as np
 import torch
 
 from experiments._runner import (
-    DATA,
     RESULTS,
     cached_activations,
     content_hash,
@@ -55,7 +52,6 @@ from src.directions import (
     ablate_dir,
     add_dir,
     diff_of_means,
-    project,
     random_unit_vector,
     unit,
 )
@@ -314,13 +310,13 @@ def _render_summary(rec: dict) -> str:
         "",
         f"- d_hat extracted from TRAIN split (n harmful={cp['C3_generalization_split']['train_n_harmful']}, n harmless={cp['C3_generalization_split']['train_n_harmless']})",
         f"- All numbers reported on HELD-OUT TEST split (n={rec['n_test']} per split)",
-        f"- Ablation: subtract d_hat component at every residual hook, every layer (faithful Arditi variant)",
+        "- Ablation: subtract d_hat component at every residual hook, every layer (faithful Arditi variant)",
         f"- Addition: add `{rec['add_coeff']}` × d_hat at layer {rec['add_layer']}'s hook_resid_post (during forward of harmless prompts)",
         "",
         "## All four controls",
         "",
-        f"| | Control | Result | Criterion |",
-        f"|---|---|---|---|",
+        "| | Control | Result | Criterion |",
+        "|---|---|---|---|",
         f"| {'✅' if cp['C1_random_direction']['pass'] else '❌'} | C1: Random-direction baseline | real Δ = **{cp['C1_random_direction']['real_ablation_drop']:+.2f}**, random Δ = {cp['C1_random_direction']['random_ablation_drop']:+.2f} | {cp['C1_random_direction']['criterion']} |",
         f"| {'✅' if cp['C2_coherence_preservation']['pass'] else '❌'} | C2: Coherence preservation | baseline p50 = {cp['C2_coherence_preservation']['baseline_harmless_p50_chars']:.0f}, ablated p50 = **{cp['C2_coherence_preservation']['ablate_real_harmless_p50_chars']:.0f}** | {cp['C2_coherence_preservation']['criterion']} |",
         f"| {'✅' if cp['C3_generalization_split']['pass'] else '❌'} | C3: Generalization split | d_hat from train ({cp['C3_generalization_split']['train_n_harmful']}+{cp['C3_generalization_split']['train_n_harmless']}); eval on test ({cp['C3_generalization_split']['test_n_harmful']}+{cp['C3_generalization_split']['test_n_harmless']}) | {cp['C3_generalization_split']['criterion']} |",

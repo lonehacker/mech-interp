@@ -21,7 +21,6 @@ import json
 import sys
 from pathlib import Path
 
-
 REPO = Path("/Users/anshulsinghle/safe_ai/mech-security")
 RUNS = REPO / "artifacts/runs/phase2_step3d"
 
@@ -100,9 +99,9 @@ def main(path: str | None = None):
               f"{sum(len(c) for c in rec['baseline_gen']) / len(rec['baseline_gen']):.0f}, "
               f"this cell's mean_chars = {m['mean_chars']:.0f}")
         if m["mean_chars"] < 200:
-            print(f"  ⚠️ mean_chars dropped substantially — possible degeneration.")
+            print("  ⚠️ mean_chars dropped substantially — possible degeneration.")
         else:
-            print(f"  ✓ mean_chars in normal range — coherence likely preserved.")
+            print("  ✓ mean_chars in normal range — coherence likely preserved.")
         _dump_completions(rec, "baseline", rec["baseline_gen"][:4], indent="  ")
         _dump_completions(rec, name, rec["completions"][name][:4], indent="  ")
 
@@ -126,16 +125,16 @@ def main(path: str | None = None):
         cmult, L, name, m = lifted_low_first[0]
         if cmult <= 1.0:
             print(f"  Candidate: (B) Causal — d̂ induces refusal at {cmult}× of natural scale at L{L}.")
-            print(f"  → Eyeball completions above. If coherent refusal AND specificity holds,")
+            print("  → Eyeball completions above. If coherent refusal AND specificity holds,")
             print(f"    fire step 3c ablation at L{L} (or its neighborhood) to confirm the")
-            print(f"    operating layer. If ablation there also collapses refusal → branch (C).")
+            print("    operating layer. If ablation there also collapses refusal → branch (C).")
             print(f"    If ablation still null at L{L} → asymmetric Qwen (causal additively,")
-            print(f"    robust to ablation) — a more interesting finding than A or B.")
+            print("    robust to ablation) — a more interesting finding than A or B.")
         else:
             print(f"  Inconclusive — lift only at coeff ≥ {cmult}× which is at the magnitude-")
-            print(f"  artifact threshold. Eyeball completions AND specificity control rigorously")
-            print(f"  before assigning (B). If random vector at same coeff also induces 'refusal'-")
-            print(f"  shaped output, the lift is the magnitude artifact and the leaf is (A).")
+            print("  artifact threshold. Eyeball completions AND specificity control rigorously")
+            print("  before assigning (B). If random vector at same coeff also induces 'refusal'-")
+            print("  shaped output, the lift is the magnitude artifact and the leaf is (A).")
 
 
 def _dump_completions(rec, label, gens, indent=""):

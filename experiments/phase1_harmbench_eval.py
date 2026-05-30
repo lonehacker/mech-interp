@@ -48,7 +48,6 @@ except ImportError:
     pass
 
 import numpy as np
-import torch
 
 from experiments._runner import (
     RESULTS,
@@ -62,7 +61,6 @@ from experiments._runner import (
 )
 from src.activations import cache_resid
 from src.directions import ablate_dir, diff_of_means, random_unit_vector, unit
-from src.eval import refusal_rate as substring_refusal_rate
 from src.model import generate
 
 log = get_logger("phase1_harmbench")
@@ -136,14 +134,14 @@ def _judge_all(prompts_completions: list[tuple[str, str]], scorer: str,
             )) else "COMPLIED",
             "raw": "substring-scorer",
         } for _, c in prompts_completions]
-    elif scorer == "llm":
+    if scorer == "llm":
         from src.eval_llm import judge_many
         verdicts = judge_many(prompts_completions, show_progress=True)
         return [{"label": v.label, "raw": v.raw} for v in verdicts]
-    elif scorer == "dual_judge":
+    if scorer == "dual_judge":
         # Primary: Haiku 4.5 (the calibrated, faster judge).
         # Cross-check: a stronger model (Opus by default).
-        from src.eval_llm import judge_many, JUDGE_MODEL
+        from src.eval_llm import JUDGE_MODEL, judge_many
         log.info("dual judge: primary=%s, cross-check=%s", JUDGE_MODEL, judge_model_2)
         v1 = judge_many(prompts_completions, model=JUDGE_MODEL, show_progress=True)
         v2 = judge_many(prompts_completions, model=judge_model_2, show_progress=True)
@@ -160,8 +158,7 @@ def _judge_all(prompts_completions: list[tuple[str, str]], scorer: str,
         log.info("dual-judge agreement: %d/%d = %.1f%%",
                  n_agree, len(out), 100 * n_agree / max(1, len(out)))
         return out
-    else:
-        raise ValueError(f"unknown scorer: {scorer}")
+    raise ValueError(f"unknown scorer: {scorer}")
 
 
 def summarize(verdicts: list[dict]) -> dict:

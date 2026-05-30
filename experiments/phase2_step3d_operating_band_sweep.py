@@ -40,10 +40,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
 from experiments._runner import (
     ARTIFACTS_FIGURES,
@@ -314,11 +314,11 @@ def main() -> int:
     log.info("summary -> %s", md_path)
 
     # === Console headline ===
-    print(f"\n=== Phase 2 Step 3d — operating-band addition sweep ===")
+    print("\n=== Phase 2 Step 3d — operating-band addition sweep ===")
     print(f"Model: {bundle.name}  |  d̂ from L{args.extract_layer}  |  natural scale = {natural_scale:.3f}")
     print(f"Baseline (no hook): {base_rate:.3f}")
-    print(f"\nSubstring refusal-rate heatmap (rows = coeff multiplier, cols = inject layer):")
-    print(f"          " + "  ".join(f"L{L:>3d}" for L in args.inject_layers))
+    print("\nSubstring refusal-rate heatmap (rows = coeff multiplier, cols = inject layer):")
+    print("          " + "  ".join(f"L{L:>3d}" for L in args.inject_layers))
     for ci, cmult in enumerate(args.coeff_mults):
         row = "  ".join(f"{rate_grid[ci, li]:.2f}" for li in range(n_layers))
         print(f"  {cmult}×    {row}")
@@ -379,8 +379,8 @@ def _render_summary(rec):
         md.append("")
     md.append(f"Heatmap figure: `{rec['figure']}`")
     md.append("")
-    md.append(f"Per-prompt completions in `artifacts/runs/phase2_step3d/<timestamp>/result.json`.")
-    md.append(f"Pre-registration: `results/phase2_step3d_preregistration.md`.")
+    md.append("Per-prompt completions in `artifacts/runs/phase2_step3d/<timestamp>/result.json`.")
+    md.append("Pre-registration: `results/phase2_step3d_preregistration.md`.")
     return "\n".join(md) + "\n"
 
 

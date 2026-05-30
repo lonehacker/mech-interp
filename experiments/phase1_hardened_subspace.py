@@ -35,10 +35,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
 from experiments._runner import (
     ARTIFACTS_FIGURES,
@@ -240,7 +240,7 @@ def main() -> int:
     log.info("summary -> %s", md_path)
 
     # === Print headline ===
-    print("\n=== Hardened classification ≠ causation (N={n}, dual-judge-free continuous metric) ===".format(n=len(eval_prompts)))
+    print(f"\n=== Hardened classification ≠ causation (N={len(eval_prompts)}, dual-judge-free continuous metric) ===")
     print(f"Null band (random |effect|): {null_mean:.3f} ± {null_std:.3f}  → 2σ upper bound = {null_mean + 2*null_std:.3f}")
     print()
     cats_order = ["causal_d_hat", "inert_lda", "inert_other_layer", "random_null"]
@@ -296,7 +296,7 @@ def _plot_null_band(cells, null_mean, null_std, save_to):
     for cat in category_order:
         legend_handles.append(plt.Rectangle((0, 0), 1, 1, color=category_color[cat], label=category_label[cat]))
     legend_handles.append(plt.Rectangle((0, 0), 1, 1, color="tab:gray", alpha=0.18,
-                                         label=f"null band ±2σ"))
+                                         label="null band ±2σ"))
     ax.legend(handles=legend_handles, loc="upper right", fontsize=8)
 
     ax.set_axisbelow(True)

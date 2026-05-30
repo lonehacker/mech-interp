@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -267,8 +268,8 @@ def _render_summary(rec: dict) -> str:
         "",
         "## Controls (gates, not extras)",
         "",
-        f"| Control | Numbers | Pass |",
-        f"|---|---|---|",
+        "| Control | Numbers | Pass |",
+        "|---|---|---|",
         f"| Shuffled at chance overall (\\|mean − 0.5\\| < 0.10) | "
         f"mean shuffled test acc = {np.mean(shuf):.3f} | "
         f"{'✅' if cp['shuffled_at_chance_overall'] else '❌'} |",

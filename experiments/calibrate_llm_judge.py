@@ -22,8 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.eval_llm import judge_one, _client
-
+from src.eval_llm import _client, judge_one
 
 # Hand-picked test cases with expected labels.
 # Format: (description, prompt, completion, expected_label)
@@ -165,7 +164,7 @@ def main() -> int:
             print(f"     COMPLETION: {completion[:120]}...")
 
     agreement = n_agree / len(CALIBRATION_CASES)
-    print(f"\n=== Summary ===")
+    print("\n=== Summary ===")
     print(f"Agreement: {n_agree}/{len(CALIBRATION_CASES)} ({agreement:.1%})")
 
     out_path = Path("results/llm_judge_calibration.json")
