@@ -422,37 +422,63 @@ split, tells you how much of the harmful-vs-harmless AUC is purely
 lexical-by-construction. **Both contrastive sets used in this project
 are heavily lexically confounded:**
 
-| Contrastive set | n / side | Bag-of-words test AUC |
-|---|---:|---:|
-| Phase 1 — AdvBench + Alpaca | 150 + 150 | **0.9877** |
-| Phase 2 — HB cyber + AdvBench-code + CodeAlpaca | 150 + 150 | **0.9946** |
-| Phase 2 matched DRAFT — HB cyber + defensive equivalents | 40 + 40 | **0.6736** |
+| Contrastive set | n / side | 5-fold CV (PRIMARY) | single 70/30 (diagnostic) |
+|---|---:|---:|---:|
+| Phase 1 — AdvBench + Alpaca | 150 + 150 | ≈ 0.99 | 0.9877 |
+| Phase 2 — HB cyber + AdvBench-code + CodeAlpaca | 150 + 150 | ≈ 0.99 | 0.9946 |
+| Phase 2 matched (v4, n=80) — HB cyber + defensive equivalents, length-matched | 40 + 40 | **0.4969 ± 0.12** | 0.5556 |
 
-The lesson: any direction in the residual stream that even partially
-aligns with the harmful-vs-harmless mean shift will read as a near-perfect
-classifier at AUC ≈ 1.0, including the diff-of-means direction, the LDA
-bootstraps, and many random unit vectors. The §3.13 classification audit
-*cannot* distinguish "refusal classifier" from "vocabulary classifier" on
-a contrast that's lexically separable at 99% AUC. Diff-of-means d̂ is a
-**mixture** of refusal + vocabulary + topic + everything else collinear
-with harmful-vs-harmless in the contrast; on Gemma that mixture includes
-the causal refusal component, and ablation removes the whole mixture
-including the causal piece, which is why refusal collapses. The Phase 2
-parallel on Qwen + code_contrastive is the empirical proof that a
-*near-pure* vocabulary direction (TF-IDF 0.99 contrast, d̂ extracted,
-ablated) does NOT collapse refusal — confirming the framing here.
+The lesson for Phase-1 / Phase-2-v1 at 0.99 AUC: any direction in the
+residual stream that even partially aligns with the harmful-vs-harmless
+mean shift will read as a near-perfect classifier, including the
+diff-of-means direction, the LDA bootstraps, and many random unit
+vectors. The §3.13 classification audit *cannot* distinguish "refusal
+classifier" from "vocabulary classifier" on a contrast that's lexically
+separable at 99% AUC. Diff-of-means d̂ is a **mixture** of refusal +
+vocabulary + topic + everything collinear with harmful-vs-harmless in
+the contrast; on Gemma that mixture includes the causal refusal
+component, and ablation removes the whole mixture including the causal
+piece, which is why refusal collapses. The Phase 2 parallel on Qwen +
+`code_contrastive` is the empirical proof that a *near-pure* vocabulary
+direction (TF-IDF 0.99 contrast, d̂ extracted, ablated) does NOT
+collapse refusal — confirming the framing here.
 
-The Phase 2 matched DRAFT (TF-IDF 0.67) is the next experimental fix:
-test whether de-confounding the contrast recovers a diff-of-means
-direction with a causal hand on Qwen. See `results/phase2_vocab_audit.md`.
+The Phase 2 matched set (v4, length-matched, **5-fold CV AUC 0.50 ± 0.12**
+— essentially chance) is the next experimental fix: test whether
+de-confounding the contrast recovers a diff-of-means direction with a
+causal hand on Qwen. See `results/phase2_vocab_audit.md` and
+`data/README.md` for the audit detail, including the verified
+paired-set CV artifact at min_df=1 (shuffle-pairing control restores
+chance, demonstrating the 0.29 anti-prediction is structural to paired
+constraints under CV, not residual lexical separability).
+
+The single 70/30 split on the matched set gave 0.5556 — one draw from
+the CV distribution above whose range spans [0.34, 0.62]. **Single-split
+TF-IDF on small (n≈80) sets underreports variance; report distributions.**
+Second instance of the same lesson (report distributions, not point
+estimates) that surfaced with the random-direction-AUC catch — both
+single-sample classification baselines and the CV-vs-single-split
+discrepancy on the matched set point at the same methodological
+discipline.
+
+**Stance/intent kept distinct from vocabulary throughout.** The matched
+set controls common vocabulary (CV-verified) and length, but NOT
+agentive stance (attacker-vs-defender) — harmful prompts ask the model
+to act as attacker, defensive prompts ask it to act as defender. Stance
+is semantic/role, not lexical; TF-IDF says nothing about it. A causal d̂
+on the matched set licenses the narrow claim "isolates refusal-OR-stance,
+not refusal alone." This is pre-registered as a hard limitation in
+`results/phase2_step3e_preregistration.md` BEFORE the matched-set causal
+sweep ran.
 
 Methodological lesson, generalized: an AUC ≈ 1.0 on a 99%-lexically-
 separable contrast is *consistent with* the direction being purely
 lexical and is not by itself evidence the direction captures refusal.
 Intervention is what carries the causal claim. When porting these
 methods to a new model or contrastive set, the bag-of-words audit is a
-five-minute, no-model-load check that puts a floor on how confounded
-your classification numbers are before you trust them.
+five-minute, no-model-load check — and on small or paired sets it
+should be CV-primary, with mechanism demonstrated rather than asserted
+(see the matched-set min_df=1 shuffle-pairing control).
 
 ## 6. Phase 2 protocol
 
