@@ -33,8 +33,13 @@ def _cache_at_hooks(
     show_progress: bool,
     format_fn: Callable[[str], str] | None,
     desc: str,
+    position: int = -1,
 ) -> list[torch.Tensor]:
-    """Run a forward pass per prompt; return last-token activation per hook.
+    """Run a forward pass per prompt; return the activation at `position` per hook.
+
+    position is the (negative-indexed) sequence position to read; default -1
+    is the last token. Phase 2 bypass-gap-layer-selection sweeps positions
+    -4..-1 to cover the Qwen ChatML end-of-instruction tokens.
 
     Returns a list of length n_prompts, each entry [n_hooks, d_model] on CPU fp32.
     """
@@ -50,7 +55,7 @@ def _cache_at_hooks(
             ids = bundle.model.to_tokens(raw)
         _, cache = bundle.model.run_with_cache(ids, names_filter=hook_names, return_type=None)
         per_hook = torch.stack(
-            [cache[h][0, -1].detach().to("cpu").float() for h in hook_names], dim=0
+            [cache[h][0, position].detach().to("cpu").float() for h in hook_names], dim=0
         )  # [n_hooks, d_model]
         out.append(per_hook)
     return out
@@ -64,20 +69,23 @@ def cache_resid(
     apply_template: bool = True,
     show_progress: bool = True,
     format_fn: Callable[[str], str] | None = None,
+    position: int = -1,
 ) -> torch.Tensor:
-    """Cache last-token resid_post activations at ONE layer.
+    """Cache resid_post activations at ONE layer, at one sequence position.
 
-    Returns [n_prompts, d_model] on CPU.
+    Returns [n_prompts, d_model] on CPU. position defaults to -1 (last token)
+    — set to e.g. -4 for the Phase 2 bypass-gap-layer-selection position sweep.
 
     format_fn defaults to Gemma `format_prompt`. For Qwen / Phase 2 / any
     non-Gemma model, pass `lambda m: format_prompt_for_bundle(bundle, m)`.
     """
     if layer < 0 or layer >= bundle.n_layers:
         raise ValueError(f"layer {layer} out of range [0, {bundle.n_layers})")
+    desc = f"cache L{layer}" if position == -1 else f"cache L{layer} pos{position}"
     per_hook_list = _cache_at_hooks(
         bundle, prompts, [_resid_hook_name(layer)],
         apply_template=apply_template, show_progress=show_progress,
-        format_fn=format_fn, desc=f"cache L{layer}",
+        format_fn=format_fn, desc=desc, position=position,
     )
     # squeeze hook dim — only 1 hook
     return torch.stack([p[0] for p in per_hook_list], dim=0)

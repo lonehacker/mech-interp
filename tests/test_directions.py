@@ -17,6 +17,7 @@ import pytest
 import torch
 
 from src.directions import (
+    bypass_gap,
     diff_of_means,
     project,
     random_unit_vector,
@@ -122,3 +123,94 @@ class TestRoundtrip:
 
         # All harmful projections > all harmless projections
         assert proj_h.min().item() > proj_l.max().item()
+
+
+class TestBypassGap:
+    """bypass_gap is the causal-effect measurement that drives Phase 2
+    bypass-gap-layer-selection. These tests use stub objects to verify the
+    contract (counts, gap arithmetic, scorer override, baseline reuse) without
+    a real model load."""
+
+    class _StubModel:
+        def hooks(self, fwd_hooks=None):
+            from contextlib import contextmanager
+
+            @contextmanager
+            def _noop():
+                yield
+            return _noop()
+
+        @property
+        def cfg(self):
+            class _Cfg:
+                n_layers = 12
+                d_model = 8
+                device = "cpu"
+                dtype = torch.float32
+            return _Cfg()
+
+    class _StubBundle:
+        def __init__(self):
+            self.model = TestBypassGap._StubModel()
+
+    def test_arithmetic_and_scorer_override(self, monkeypatch):
+        prompts = ["p1", "p2", "p3", "p4"]
+        # Baseline scorer says 1.0; ablated says 0.25 → gap = 0.75
+        baselines = ["REFUSED", "REFUSED", "REFUSED", "REFUSED"]
+        ablations = ["sure", "here", "REFUSED", "ok"]
+        # Patch generate so it returns predictable strings
+        calls = {"n": 0}
+        def fake_generate(bundle, prompt, max_new_tokens=160, temperature=0.0):
+            calls["n"] += 1
+            return baselines[calls["n"] - 1] if calls["n"] <= 4 else ablations[calls["n"] - 5]
+        monkeypatch.setattr("src.directions.generate", fake_generate, raising=False)
+        # Also patch ablate_dir to be a no-op (we don't have a real model)
+        from contextlib import contextmanager
+        @contextmanager
+        def noop_ablate(*a, **k):
+            yield
+        monkeypatch.setattr("src.directions.ablate_dir", noop_ablate, raising=False)
+
+        # NOTE: with monkeypatch on src.directions.generate, calling from inside
+        # bypass_gap (which imports generate lazily inside the function) won't
+        # pick up the patch. The function does `from src.model import generate`
+        # locally — we patch that instead.
+        import src.model
+        monkeypatch.setattr(src.model, "generate", fake_generate)
+
+        bundle = self._StubBundle()
+        d = torch.zeros(8)
+
+        def scorer(gens):
+            return sum(g == "REFUSED" for g in gens) / len(gens)
+
+        out = bypass_gap(bundle, d, prompts, max_new_tokens=8, scorer=scorer)
+        assert out["baseline_refusal"] == 1.0
+        assert out["ablated_refusal"] == 0.25
+        assert out["gap"] == 0.75
+        assert out["baseline_completions"] == baselines
+        assert out["ablated_completions"] == ablations
+
+    def test_baseline_reuse_skips_regeneration(self, monkeypatch):
+        prompts = ["p1", "p2"]
+        # Track calls — if baseline_completions is provided we should call gen
+        # only n_prompts times (for the ablation), not 2*n.
+        calls = {"n": 0}
+        def fake_generate(bundle, prompt, max_new_tokens=160, temperature=0.0):
+            calls["n"] += 1
+            return "compliant"
+        import src.model
+        monkeypatch.setattr(src.model, "generate", fake_generate)
+        from contextlib import contextmanager
+        @contextmanager
+        def noop_ablate(*a, **k):
+            yield
+        monkeypatch.setattr("src.directions.ablate_dir", noop_ablate, raising=False)
+
+        bundle = self._StubBundle()
+        d = torch.zeros(8)
+        precomputed = ["REFUSED", "REFUSED"]
+        out = bypass_gap(bundle, d, prompts, baseline_completions=precomputed,
+                         scorer=lambda gs: sum(g == "REFUSED" for g in gs) / len(gs))
+        assert calls["n"] == 2  # only ablation gens, baseline reused
+        assert out["baseline_completions"] is precomputed

@@ -79,16 +79,45 @@ The intended pre-reg classes don't fit cleanly. The honest assignment is **INCON
 
 The intervention magnitude is too small relative to the n=10 noise floor to clearly attribute the cell lifts to d̂ specifically. Either the de-confounded direction is genuinely weak (consistent with the 4× natural-scale drop), or the lift is a magnitude artifact at high coefficients that random reproduces less efficiently.
 
-## Next step: RDO as ground truth, then backwards decomposition
+## Next step: bypass-gap layer selection, then verify with our harness
 
-The pre-reg's null-branch scale-up plan (more matched pairs) would help — but **the cheaper, more decisive next move is RDO**. RDO optimizes directly against behavior, so it provides a *known-causal* reference vector to measure d̂_matched and d̂_old against. That converts the unanswerable "is this weak thing causal?" into a robust-at-any-N cosine test: "how much does d̂_matched overlap d_rdo?".
+This L14 result was extracted at the AUC-peak layer — but AUC is saturated on
+Qwen (≥0.994 at every layer including L0), so L14 was effectively arbitrary.
+What's been tested so far is *diff-of-means at the AUC-selected layer*. We have
+**not** tested *diff-of-means at a causally-selected layer*. See
+[`PROJECT_STATE.md`](../PROJECT_STATE.md) for the 2×2 of layer-selection
+criterion × extraction method that this section operates in.
 
-Plan (see Step 4 spec in commit message / pre-reg follow-up):
+The next moves separate the question into two orthogonal axes:
 
-- **4a.** RDO loadability audit on `~/safe_ai/geometry-of-refusal/` for Qwen2.5-3B (nnsight support; ModelBase loader; size of any lift if a Qwen loader doesn't exist).
-- **4b.** Run RDO on the SAME matched set (not code_contrastive — same set means the only variable in later comparisons is extraction METHOD).
-- **4c.** Verify d_rdo is actually causal (ablate it on held-out matched-harmful → refusal collapse; random control). Gate: if RDO is also inert/weak, that's the real (A-ii) signal — refusal isn't linearly steerable on Qwen, stop and report.
-- **4d.** Backwards decomposition (conditional on 4c passing): cos(d_rdo, d̂_matched), cos(d_rdo, d̂_old), and cos(d_rdo, the TF-IDF/L0 separability subspace). All sample-robust. The shape of these three cosines tells us *why* diff-of-means failed — wrong direction, right direction but too weak, or causal direction structurally orthogonal to the separability subspace that statistical extraction keys on.
+- **Layer-selection criterion**: AUC (broken on Qwen) vs **bypass-gap**
+  (causal-effect-based — what Wollschläger's selector uses).
+- **Extraction method**: diff-of-means (yields `d̂`) vs RDO (yields `d_rdo`).
+
+Plan:
+
+- **4a. Loadability audit** on `~/safe_ai/geometry-of-refusal/` for Qwen2.5-3B
+  (nnsight; ModelBase; Qwen2.x paths). Done — clean.
+- **4b. bypass-gap-layer-selection** on the matched set (Wollschläger's
+  selector in their harness, on `data/code_contrastive_matched.jsonl`). Done.
+  Found candidate region at L20-L24 around positions -4/-1 with strong
+  bypass + steering signals; all cells failed the paper's strict KL=0.1
+  preservation threshold (could be miscalibration for Qwen, or could indicate
+  real distributional disruption — our harness adjudicates next).
+- **Part 2 (current).** Diff-of-means + bypass-gap-layer-selection in **our**
+  harness with dual-judge. Targeted at L19-L25 × positions {-1, -4} (prior
+  from 4b). Coherence check load-bearing at the best cell. If completions
+  remain coherent refusals-turned-compliant → layer-selection-artifact
+  confirmed: plain diff-of-means at the bypass-gap-selected layer is causal,
+  and the L14 inertness was a layer-selection artifact (AUC-saturation).
+- **Conditional follow-ups** (only after Part 2 resolves):
+  - **RDO extraction** at the layer chosen by bypass-gap-selection, followed
+    by `d_rdo` causal verification.
+  - **Backwards decomposition** cosines: `cos(d_rdo, d̂_at_that_layer)`,
+    `cos(d_rdo, d̂_old)`, `cos(d_rdo, TF-IDF/L0-separability subspace)`. If
+    `cos(d_rdo, d̂_at_layer)` is high, RDO extraction is CONFIRMATION not the
+    headline; diff-of-means and RDO agree once the layer is chosen by
+    bypass-gap.
 
 ## Files
 

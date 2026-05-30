@@ -82,8 +82,34 @@ This is the operation everything else builds on. The function:
 
 ```python
 from src.activations import cache_resid
-acts = cache_resid(bundle, prompts, layer=13)   # [n_prompts, d_model]
+acts = cache_resid(bundle, prompts, layer=13, position=-1)   # [n_prompts, d_model]
 ```
+
+**`layer=13` and `position=-1` are CHOICES, not givens — and the choice of
+*how to pick the layer* turned out to matter as much as anything else in this
+project.** Two methods to pick a layer:
+
+- **AUC-layer-selection** — train a linear probe to discriminate harmful
+  from harmless activations at each layer; pick the peak. This is what
+  Phase 1 did to land on L13.
+- **bypass-gap-layer-selection** — extract a direction at each candidate
+  (layer, position), ablate during generation, pick the layer with the
+  largest refusal drop. Causal-effect criterion, what Wollschläger's
+  selector uses.
+
+On Gemma the two methods happen to converge — separability is non-trivial
+and the AUC peak (L13) coincides with a layer whose ablation is causal. We
+got lucky. On Qwen (Phase 2) AUC is *saturated* (≥0.994 at every layer
+including L0 = 0.9996), so AUC cannot discriminate — L14 was effectively
+arbitrary, and ablating diff-of-means at L14 found nothing. The bypass-gap
+selector running on the same matched contrastive set flagged a totally
+different region (L20-L24, position -4 or -1), which Phase 2 Part 2
+verifies in our harness. The full story is in
+[`PROJECT_STATE.md`](PROJECT_STATE.md) (terminology + 2×2 of layer-selection
+criterion × extraction method).
+
+For the rest of this Phase 1 walkthrough, take L13/last-token as a given —
+just know that it was a one-criterion-only choice that happened to work.
 
 Inside, for each prompt:
 
@@ -280,6 +306,37 @@ Five swaps, all parameterized in the codebase already:
 3. **BOS check skipped**: Qwen's chat template doesn't start with BOS, so `tokenize_prompt`'s BOS-count assertion is skipped (it only runs when the template starts with `bos_token`).
 4. **Layer**: Qwen2.5-3B has 36 layers. The AUC peak is at L14 but the layer sweep showed AUC ≥ 0.994 at every layer including L0 (embedding output), so AUC alone doesn't pick the causal layer — needs an intervention-based operating-band sweep.
 5. **First-token sets**: refusal opener is `"I"` (token id 40, 100% coverage on harmful) instead of Gemma's `"I"` (token id 235285, 99% coverage); compliance opener is `"Certainly"` (token id 95456, 71%) instead of Gemma's `"##"` (token id 1620, 41%). The discovery procedure in `src.causal_metric.discover_first_token_sets` runs once per model.
+
+## Two axes: layer-selection criterion × extraction method (Phase 2 Part 2 framing)
+
+Phase 2 Step 3 found that ablating `d̂` at L14 on Qwen drops refusal 1.00 → 0.97
+— essentially zero effect. Easy to read as "diff-of-means is inert on Qwen,"
+but that conflates two independent choices. They factor as:
+
+- **Layer-selection criterion**: which layer (and position) to extract at.
+  Options: AUC (linear-probe separability) or bypass-gap (ablation effect on
+  refusal-token probability).
+- **Extraction method**: given a layer, which vector to compute. Options:
+  diff-of-means (`d̂`) or RDO (`d_rdo`).
+
+We picked L14 by AUC. But on Qwen, separability is saturated (≥0.994 at every
+layer including L0 = 0.9996), so AUC can't *discriminate* layers — L14 was
+effectively the first layer to hit float-1.000. The L14 ablation null is a
+result about (AUC-layer-selection × diff-of-means), not about diff-of-means
+generally. The (bypass-gap × diff-of-means) cell was untested.
+
+Wollschläger's `select_direction` step ranks layers by bypass-gap (the drop in
+refusal-token logit under ablation at each candidate (layer, position) cell).
+Running it on the matched set found the candidate region: L20-L24 around
+positions {-4, -1}, with refusal-score drops of -10 to -12 and positive
+elicitation under addition. The paper's strict `kl_threshold=0.1` rejects
+these for coherence reasons; whether that's miscalibration on Qwen vs real
+disruption is what `experiments/phase2_part2_dim_bypass_gap_sweep.py` decides
+— it ablates diff-of-means d̂ at the prior region in our harness, with
+dual-judge scoring and an explicit coherence read at the best cell.
+
+`PROJECT_STATE.md` has the 2×2 + binding terminology for any docs that need to
+talk about layer-selection vs extraction separately.
 
 ## How the continuous causal metric (Phase 1.5) works
 

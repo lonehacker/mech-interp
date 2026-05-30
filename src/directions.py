@@ -141,3 +141,66 @@ def add_dir(
 
     with model.hooks(fwd_hooks=[(f"blocks.{layer}.{hook_suffix}", hook_fn)]):
         yield
+
+
+def bypass_gap(
+    bundle,
+    direction: torch.Tensor,
+    prompts: list[str],
+    *,
+    baseline_completions: list[str] | None = None,
+    max_new_tokens: int = 160,
+    scorer=None,
+) -> dict:
+    """Causal-effect-on-refusal measurement: the bypass gap.
+
+    Generates twice (baseline + ablated) over `prompts`; scores both with
+    `scorer`; returns the gap.
+
+    The "bypass gap" of a direction = (baseline refusal rate) − (ablated
+    refusal rate) on a held-out set. Used by Phase 2 bypass-gap-layer-
+    selection: sweep layers, pick the one with the largest gap. Peer to
+    `diff_of_means` as an experiment primitive — diff-of-means PRODUCES a
+    direction; bypass_gap MEASURES whether that direction is causal.
+
+    Pass `baseline_completions` to avoid the baseline regeneration when
+    sweeping many directions over the same test set.
+
+    scorer: callable `list[str] -> float` (refusal rate). Defaults to
+    substring `is_refusal`. Pass a Haiku-4.5-judge wrapper for dual-judge.
+
+    Returns:
+        {"baseline_refusal": float, "ablated_refusal": float, "gap": float,
+         "baseline_completions": list[str], "ablated_completions": list[str],
+         "mean_chars_baseline": float, "mean_chars_ablated": float}
+    """
+    from src.eval import is_refusal
+    from src.model import generate
+
+    if scorer is None:
+        scorer = lambda gens: sum(is_refusal(g) for g in gens) / len(gens)  # noqa: E731
+
+    if baseline_completions is None:
+        baseline_completions = [
+            generate(bundle, p, max_new_tokens=max_new_tokens, temperature=0.0).strip()
+            for p in prompts
+        ]
+    baseline_refusal = scorer(baseline_completions)
+
+    with ablate_dir(bundle.model, direction):
+        ablated_completions = [
+            generate(bundle, p, max_new_tokens=max_new_tokens, temperature=0.0).strip()
+            for p in prompts
+        ]
+    ablated_refusal = scorer(ablated_completions)
+
+    mean_chars = lambda gs: sum(len(g) for g in gs) / max(1, len(gs))  # noqa: E731
+    return {
+        "baseline_refusal": baseline_refusal,
+        "ablated_refusal": ablated_refusal,
+        "gap": baseline_refusal - ablated_refusal,
+        "baseline_completions": baseline_completions,
+        "ablated_completions": ablated_completions,
+        "mean_chars_baseline": mean_chars(baseline_completions),
+        "mean_chars_ablated": mean_chars(ablated_completions),
+    }
