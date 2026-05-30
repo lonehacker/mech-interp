@@ -15,11 +15,9 @@
 Exactly one of (A), (B), (C) is the Phase 2 finding. Bind to the evidence below; do not pre-commit.
 
 ### (A) Genuinely inert
-**Definition:** No addition cell in the operating-band sweep induces refusal on CodeAlpaca-harmless test prompts at any (injection layer × coefficient) combination tested, AND single-layer ablation at any causally-live layer (if none, then any tested layer) fails to drop refusal on held-out code-harmful prompts.
+**Definition:** No addition cell in the operating-band sweep induces refusal on CodeAlpaca-harmless test prompts at any (injection layer × coefficient ≥ 1×) combination tested, AND single-layer ablation at any causally-live layer (if none, then any tested layer) fails to drop refusal on held-out code-harmful prompts.
 
-**Interpretation:** d̂_diff-of-means on Qwen2.5-3B + code_contrastive is causally inert. Classification ≠ causation extends to a second model, this time at the *direction* level — the diff-of-means recipe recovers a vocabulary direction (or near-vocabulary direction) and the actual refusal mechanism lives elsewhere (likely needs RDO or multi-direction extraction). The normalization gate + operating-band sweep + per-layer scale audit are the rigor that earns this claim.
-
-**This is the strongest version of the §3 thesis** if it lands.
+**Interpretation (narrowed post-result):** On *this* contrastive set, d̂_diff-of-means at L14 is causally inert. The contrastive set turns out to be separable by vocabulary alone (TF-IDF AUC 0.99, L0 real AUC 1.00 — see `results/phase2_vocab_audit.md`), which means the d̂ this recipe recovers cannot be distinguished from a purely lexical direction. **The honest claim is "diff-of-means on a lexically-separable contrastive set recovers the lexical direction, not refusal."** Whether Qwen's refusal mechanism is reachable by diff-of-means *on a vocabulary-matched contrastive set* is an open question — answering it requires a topic-matched harmless side (defensive/sanitized equivalents of the harmful prompts). Do NOT claim "the refusal mechanism lives elsewhere on Qwen" from (A) alone; that's the (A-ii) sub-reading and requires the matched-set experiment to license.
 
 ### (B) Causal, wrong layer/scale
 **Definition:** Addition sweep induces refusal at some (injection layer × coefficient) cell — refusal lift > 0.30 over baseline-harmless with specificity (random direction at same cell doesn't induce) — OR single-layer ablation drops refusal at some layer, even though all-layer ablation at L14 didn't.
