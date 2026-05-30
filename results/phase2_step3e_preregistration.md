@@ -9,7 +9,23 @@ Phase 2 Step 3 (ablation) and Step 3d (operating-band addition sweep) on Qwen2.5
 - **(A-i)** *Data-driven null:* d̂ from a vocabulary-confounded contrast is a lexical direction with no refusal component; ablating it shouldn't move refusal because vocabulary isn't the refusal mechanism. Fix is a de-confounded contrast.
 - **(A-ii)** *Model-driven null:* Qwen2.5-3B's refusal genuinely doesn't live in any diff-of-means-recoverable direction (regardless of contrast); needs RDO / multi-direction extraction.
 
-The matched contrastive set (`data/code_contrastive_matched.jsonl`, hash `ed5cfdeff469`, 40 pairs, TF-IDF AUC 0.6111 — confound substantially removed) is the experimental fix that distinguishes them. If d̂ on the matched set has a causal hand on Qwen, the null was data-driven (A-i). If not, the null is potentially model-driven (A-ii) — but only at adequate N (see asymmetric read below).
+The matched contrastive set (`data/code_contrastive_matched.jsonl`, hash `1e6df4923256`, 40 pairs, **TF-IDF AUC 0.5556** — vocabulary confound essentially removed at the bag-of-words level after v3 cleanup) is the experimental fix that distinguishes them. If d̂ on the matched set has a causal hand on Qwen, the null was data-driven (A-i, narrowly). If not, the null is potentially model-driven (A-ii) — but only at adequate N (see asymmetric read below).
+
+## Pre-registered interpretation bounds (logged BEFORE the run)
+
+**Two limitations of this contrastive set that bound what a result can license:**
+
+1. **Residual lexical confound.** The matched set reduces but does not eliminate lexical separability. Residual TF-IDF AUC 0.56 (chance 0.50) concentrates in security-intent verbs spread across audit / scan / monitor / harden / mitigate / profile / quarantine.
+
+2. **Stance/intent entanglement (the deeper caveat).** Harmful prompts ask the model to act as ATTACKER ("write code to exploit X"); defensive prompts ask it to act as DEFENDER ("write code to mitigate X"). A diff-of-means direction extracted from this contrast may capture an **attacker-vs-defender stance direction** rather than a refuse-vs-comply direction. Stance correlates with refusal because the model refuses attacker-role requests. This set confounds security-intent AND agentive stance; it does not isolate refusal from either.
+
+**What a result will and won't license, narrowed:**
+
+- A *positive* causal result on this set supports the **narrow claim**: "diff-of-means recovers a causal direction on a less-lexically-confounded contrast (and on a contrast that flips agentive stance from attacker to defender)" — NOT "refusal isolated from vocabulary." State the stance/intent entanglement explicitly alongside any positive result.
+
+- A *null* result at n=40 (10-prompt held-out test) is **INCONCLUSIVE**. Statistical power is low and (A-ii) — "Qwen's refusal genuinely isn't in a diff-of-means direction" — is the bigger claim and needs the higher bar. Do NOT conclude (A-ii) from this experiment alone. Scale up to 100+ pairs before any (A-ii) claim.
+
+The methodological finding for §9 regardless of outcome: **building a clean refusal contrastive set is hard *because* harmfulness correlates with both vocabulary and stance.** Removing one confound doesn't isolate refusal — it shifts which confound carries the AUC. This is a substantive piece of methodological framing for any port of these methods, not a defect of this particular set.
 
 ## Sweep design (locked before run)
 
