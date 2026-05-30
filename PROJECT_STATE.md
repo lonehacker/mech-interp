@@ -107,31 +107,76 @@ this in our harness with dual-judge + coherence check.
   4× smaller natural scale (2.05 vs 8.94). → `results/phase2_step3e_matched_set_sweep.md`
 
 ### Resolved
+- **Part 1** — terminology audit. This file + HOW_IT_WORKS §"Two axes"
+  are the artifact.
 - **Step 4a** — geometry-of-refusal loadability for Qwen2.5-3B: confirmed.
   QwenModel + rdo.py + bypass-gap-layer-selector all work on Qwen2.x paths.
 - **Step 4b** — diff-of-means × bypass-gap-layer-selection in Wollschläger's
   harness on matched set: 180 (pos × layer) cells swept. 18 cells with
   refusal_score < −5 AND steering > 0 at non-pruned layers (L0-L27).
-  Strongest: pos -4 around L20-L24 (refusal -10 to -11, steering +4.3 to +4.6,
-  KL 1.5-3). All cells failed the paper's strict kl_threshold=0.1 — could
-  be miscalibration for Qwen OR could indicate the bypasses come with real
-  distributional disruption. **Part 2 in our harness adjudicates.**
-
-### In progress
-- **Part 1** — terminology audit (this file is the artifact).
+  Strongest: pos −4 around L20-L24 (refusal −10 to −11, steering +4.3 to +4.6,
+  KL 1.5–3). Paper's strict `kl_threshold=0.1` rejected all candidates;
+  Part 2 in our harness adjudicated whether that's miscalibration or
+  real disruption.
 - **Part 2** — diff-of-means + bypass-gap layer sweep in mech-security
-  harness, dual-judge, targeted at L19-L25 × positions {−1, −4} (prior from
-  Step 4b). Coherence check load-bearing at best cell.
+  harness, dual-judge, L19-L25 × positions {−1, −4} (pre-committed to
+  Step 4b's prior region). **Result: Reading A locked.** At L22 (both
+  positions) + L23 + L25, ablating `d̂` drops refusal 9-10/10 → 0/10
+  cleanly (judge: 0 refused / 0 partial / 10 complied), with mean_chars
+  matching baseline (770-787 vs 737, within ±10%). The d̂-ablated
+  completions are detailed on-target answers to each specific harmful
+  request, in fluent Qwen voice — not on-topic rambling, not degraded
+  output. Random-direction control at the *same* L22 cells (3 seeds
+  × 2 positions = 6 cells) reproduces baseline refusal: judge 9/10
+  refused, completions are textbook "I'm sorry, but I can't assist…"
+  refusals. d̂-specificity holds across seeds; layer is not fragile.
+  - See `results/phase2_part2_dim_bypass_gap_sweep.md` (forthcoming
+    writeup) and `artifacts/runs/phase2_part2/20260530-134914/result.json`
+    + `artifacts/runs/phase2_part2_random_at_prior/20260530-153438/result.json`
+    for the raw numbers + per-prompt completions.
+  - **Caveat (pre-registered, survives the clean result):** the matched
+    contrast controls vocabulary (TF-IDF AUC ≈ 0.50) but cannot control
+    attacker-vs-defender *stance*. The honest headline sentence is
+    "diff-of-means at the bypass-gap-selected layer recovers a causal
+    direction whose ablation collapses refusal on this matched contrast,"
+    with the standing note that the direction isolates *refusal-or-stance*,
+    not refusal cleanly. Orthogonal to the layer-selection finding.
 
-### Pending (conditional on Part 2)
-- **RDO extraction run** + d_rdo causal verification (if Part 2 shows
-  layer-selection-artifact confirmed).
-- **Backwards decomposition** — cos(d_rdo, d̂_at_that_layer), cos(d_rdo,
-  d̂_old), cos(d_rdo, TF-IDF/L0-separability subspace).
+### Pending — optional (no longer load-bearing)
+- **RDO extraction at L22** + d_rdo causal verification — was the fallback
+  for "diff-of-means can't find it." Diff-of-means did find it; RDO is now
+  confirmation at best (does cos(d_rdo, d̂_L22) ≈ 1?), not a required next
+  experiment. Treat as possible appendix.
+- **Backwards decomposition** cosines — same: appendix material, not
+  spine.
 
-### Headline candidate (if Part 2 confirms)
+### Headline (earned)
 
-*"On saturated-separability models, AUC-based layer-selection fails where
-bypass-gap-based layer-selection succeeds — plain diff-of-means recovers the
-causal direction at the causally-selected layer."* RDO extraction would then
-be CONFIRMATION (cos(d_rdo, d̂_at_layer) high), not the headline.
+**"AUC-based layer-selection fails on saturated-separability models;
+bypass-gap-based layer-selection recovers the causal refusal direction
+that plain diff-of-means then extracts."**
+
+This is the practical-teeth version: the fix is a layer-selection
+criterion anyone can apply, not a gradient pipeline. The Phase 2 L14
+inertness was the wrong *layer/position* via the wrong *selection
+criterion*; the direction-extraction method was always fine.
+
+### Unified writeup spine (across Phase 1 + 1.5 + 2)
+
+Classification ≠ Causation at three levels:
+
+1. **Gemma direction-level** (Phase 1.5-A) — LDA-bootstrap directions
+   classify harmful/harmless at AUC = 1.0, sit inside the random null
+   band (z ≈ 0) under continuous causal-effect ablation. `d̂` at z ≈ +90.
+2. **Gemma prompt-level** (Phase 1.5-B) — fictional-framing prompts
+   project onto the refusal direction the same as direct harmful prompts,
+   but the model complies anyway. Same activations, different behavior.
+3. **Qwen model-level** (Phase 2) — separability saturates at every
+   layer including L0; the causal direction localizes to one specific
+   layer/position region recoverable only by bypass-gap-based selection.
+
+Unifying claim: *separability is cheap and uninformative about mechanism
+location; intervention localizes it; the gap between them is real and
+grows from Gemma to Qwen.* The Qwen-specific methodological lesson
+(AUC vs bypass-gap layer-selection) is the bridge — a portable fix for
+the next saturated-separability model.
