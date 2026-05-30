@@ -415,6 +415,45 @@ compliance when d̂ is ablated, which can't be explained by any
 vocabulary-direction reading. §3.10c is the cleaner demonstration; §3.13
 is the direction-level cross-check.
 
+### 5.5 Vocabulary-confound audit on the contrastive sets themselves
+
+A TF-IDF unigram logistic regression on the contrastive set itself, 70/30
+split, tells you how much of the harmful-vs-harmless AUC is purely
+lexical-by-construction. **Both contrastive sets used in this project
+are heavily lexically confounded:**
+
+| Contrastive set | n / side | Bag-of-words test AUC |
+|---|---:|---:|
+| Phase 1 — AdvBench + Alpaca | 150 + 150 | **0.9877** |
+| Phase 2 — HB cyber + AdvBench-code + CodeAlpaca | 150 + 150 | **0.9946** |
+| Phase 2 matched DRAFT — HB cyber + defensive equivalents | 40 + 40 | **0.6736** |
+
+The lesson: any direction in the residual stream that even partially
+aligns with the harmful-vs-harmless mean shift will read as a near-perfect
+classifier at AUC ≈ 1.0, including the diff-of-means direction, the LDA
+bootstraps, and many random unit vectors. The §3.13 classification audit
+*cannot* distinguish "refusal classifier" from "vocabulary classifier" on
+a contrast that's lexically separable at 99% AUC. Diff-of-means d̂ is a
+**mixture** of refusal + vocabulary + topic + everything else collinear
+with harmful-vs-harmless in the contrast; on Gemma that mixture includes
+the causal refusal component, and ablation removes the whole mixture
+including the causal piece, which is why refusal collapses. The Phase 2
+parallel on Qwen + code_contrastive is the empirical proof that a
+*near-pure* vocabulary direction (TF-IDF 0.99 contrast, d̂ extracted,
+ablated) does NOT collapse refusal — confirming the framing here.
+
+The Phase 2 matched DRAFT (TF-IDF 0.67) is the next experimental fix:
+test whether de-confounding the contrast recovers a diff-of-means
+direction with a causal hand on Qwen. See `results/phase2_vocab_audit.md`.
+
+Methodological lesson, generalized: an AUC ≈ 1.0 on a 99%-lexically-
+separable contrast is *consistent with* the direction being purely
+lexical and is not by itself evidence the direction captures refusal.
+Intervention is what carries the causal claim. When porting these
+methods to a new model or contrastive set, the bag-of-words audit is a
+five-minute, no-model-load check that puts a floor on how confounded
+your classification numbers are before you trust them.
+
 ## 6. Phase 2 protocol
 
 **Target: `Qwen/Qwen2.5-3B-Instruct`.** The original master spec named

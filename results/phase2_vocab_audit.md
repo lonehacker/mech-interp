@@ -1,4 +1,30 @@
-# Phase 2 vocabulary audit — `data/code_contrastive.jsonl`
+# Vocabulary audit — both contrastive sets, unified narrative
+
+**Run 2026-05-30 covers all three contrastive sets in the project at once. The unified result: both Phase 1 and Phase 2 contrastive sets are heavily lexically separable (TF-IDF unigram test AUC 0.99 each), and a topic-matched defensive-equivalent draft de-confounds to AUC 0.67. This reframes §3 across the writeup: the diff-of-means direction d̂ is a *mixture* of refusal + vocabulary + topic that happens to be collinear in the contrastive set used to extract it.**
+
+## Headline TF-IDF unigram logistic-regression test AUC, 70/30 split
+
+| Contrastive set | n / side | Test AUC | Interpretation |
+|---|---:|---:|---|
+| Phase 1 (Gemma) — `data/contrastive.jsonl` (AdvBench harmful + Alpaca harmless) | 150+150 | **0.9877** | Heavily confounded — vocabulary alone classifies at 99%. |
+| Phase 2 (Qwen) — `data/code_contrastive.jsonl` (HB cyber + AdvBench-code harmful + CodeAlpaca harmless) | 150+150 | **0.9946** | Heavily confounded — even more so than Phase 1. |
+| Phase 2 matched DRAFT — `/tmp/code_contrastive_matched_draft.jsonl` (HB cyber harmful + defensive equivalents) | 40+40 | **0.6736** | De-confounded — vocabulary alone barely above chance (0.5). |
+
+## What this unified result establishes
+
+1. **The confound is in the data, not the model.** Both Phase 1's AdvBench-vs-Alpaca and Phase 2's HB-cyber-vs-CodeAlpaca have nearly identical lexical separability (~99% AUC) under the same bag-of-words classifier. AdvBench and Alpaca differ enormously in vocabulary (AdvBench harmful imperatives vs Alpaca diverse instructions); HB cyber + AdvBench code differs from CodeAlpaca for the same reason on a different topic. Both are confounded; neither was chosen carefully to avoid lexical confounding (Phase 1 used length matching, Phase 2 used CodeAlpaca length-filtered, but neither matched topic + vocabulary intentionally).
+
+2. **Gemma's d̂ is a mixture that includes the causal refusal component.** The mixture decomposes as (vocabulary direction) + (causal refusal direction) + (other topic/sentiment components that happen to be collinear with harmful-vs-harmless). When you ablate d̂, you remove all of them — and the causal refusal component being in the mixture is what makes ablation collapse refusal (99% → 8% on HarmBench N=200, intervention-verified). The Phase 1 causal claim survives the confound completely because *intervention* is what tests causality, and the intervention on Gemma's d̂ works.
+
+3. **Qwen's d̂ on `code_contrastive` is a mixture without (or with negligible) refusal component.** Ablating d̂ on Qwen removes the vocabulary signal but does not collapse refusal (Step 3: 0.97 → 0.97 judge; Step 3d addition sweep: 0.00 induced refusal at 32 (layer × coeff ≥ 1×) cells with no degeneration). This is the empirical proof that **a pure or near-pure vocabulary direction, ablated, does NOT collapse refusal**. The Qwen null is the control that lets you see what a confounded-but-causally-empty d̂ looks like — and it doesn't look like Gemma.
+
+4. **The §3 "multiple real classifiers, only one causal" reframe is now mandatory.** The LDA bootstrap directions at L13 on Gemma are *also* extracted from a vocabulary-confounded contrast and are *also* mixtures — they likely pick up the vocabulary subspace too, just along directions near-orthogonal to d̂. The honest framing: the residual stream contains *multiple linearly-separable harmful-vs-harmless directions*, almost all of which are vocabulary/topic separability directions, and *exactly one* of which (diff-of-means d̂) ALSO contains the causal refusal component such that ablation collapses behavior. Classification ≠ causation, but the sharper version: separability ≠ refusal, and intervention is the test that picks out which separability direction (if any) is also the refusal mechanism.
+
+5. **The matched-set DRAFT (TF-IDF 0.67) is the right experimental fix.** Dropping from 0.99 → 0.67 shows the defensive-equivalent rewrites substantially remove the lexical confound. The Phase 2 matched-set causal sweep becomes a **prediction**: if d̂ extracted from the matched set is causal under ablation/addition on Qwen, the Qwen null was contrastive-set-driven and (A-i) locks. If d̂ on the matched set is still inert (with adequate N), then Qwen's refusal genuinely isn't in the diff-of-means direction even when the confound is removed, and (A-ii) earns confirmation.
+
+---
+
+
 
 Companion to the L0 = 0.9996 AUC finding from `phase2_step1_layer_sweep`. The planner observed that AUC at L0 (embedding output) = direct evidence of lexical-by-construction separation, since "L0" means "the residual stream after embedding lookup, before any transformer block has computed anything." If the embedding alone separates harmful from harmless, the separability is in the *tokens*, not in any computation the model performs.
 
