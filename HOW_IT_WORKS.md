@@ -197,6 +197,25 @@ sentiment, anything else collinear with the harmful/harmless labelling — so
 causal test in Step 6 is what tells you whether the mixture happens to
 include the actual refusal mechanism.
 
+**Other extractors as peers.** Diff-of-means is one option in `src/directions.py`;
+`lda_directions(H, L, k=k)` is a Fisher-LDA peer that returns the top-k
+orthogonal discriminant directions (used by the Phase 1 hardened-subspace
+runner and the HarmBench LDA-bootstrap stability test). RDO (gradient-based)
+is the third extraction method this project compares against — it lives in
+[`~/safe_ai/geometry-of-refusal`](../geometry-of-refusal) since it requires
+nnsight and a different intervention surface. See [`PROJECT_STATE.md`](PROJECT_STATE.md)
+for the 2×2 of layer-selection criterion × extraction method.
+
+**Targeted tests to read** for the operations above:
+- `tests/test_directions.py::TestDiffOfMeans` — what diff-of-means produces on
+  toy 2-D clusters (sanity for the centroid recipe).
+- `tests/test_directions.py::TestLdaDirections` — unit-norm output, axis
+  recovery on synthetic clusters, orthogonality across the top-k.
+- `tests/test_directions.py::TestRoundtrip::test_two_cluster_recovery` —
+  end-to-end synthetic pipeline (diff_of_means → unit → project) recovers
+  cluster separation. Read this one first; it's the shortest spec of how
+  the four primitives compose.
+
 ## Step 5 — Generate normally, to establish the baseline refusal rate
 
 ```python
@@ -258,6 +277,16 @@ Expected behaviour on Gemma-2-2b-it + AdvBench: refusal rate drops from
 12/12 → 0/12 on the substring scorer, or 12/12 → 2/12 on the calibrated LLM
 judge (which catches two pivot-style refusals the substring scorer missed).
 That's the headline "ablation collapses refusal" result, intervention-verified.
+
+**Bypass-gap as a measurement primitive.** The "refusal-rate drop under
+ablation" pattern is named `bypass_gap` in `src/directions.py` — it returns
+`baseline_refusal − ablated_refusal` plus completions and a coherence stat.
+This is what `phase2_part2_dim_bypass_gap_sweep.py` uses to rank layers
+(bypass-gap-layer-selection in PROJECT_STATE.md's 2×2).
+
+**Targeted test to read** — `tests/test_directions.py::TestBypassGap`
+shows the contract on stub objects (gap arithmetic, scorer override,
+baseline-completion reuse) without a real model load.
 
 ## Step 7 (optional but informative) — add d_hat to harmless prompts, induce refusals
 

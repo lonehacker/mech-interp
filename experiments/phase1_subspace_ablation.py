@@ -65,7 +65,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import torch
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from experiments._runner import (
     RESULTS,
@@ -78,7 +77,14 @@ from experiments._runner import (
     write_json,
 )
 from src.activations import cache_resid
-from src.directions import ablate_dir, diff_of_means, random_unit_vector, unit
+from src.directions import (
+    ablate_dir,
+    ablate_subspace,
+    diff_of_means,
+    lda_directions,
+    random_unit_vector,
+    unit,
+)
 from src.eval import coherence_ok, refusal_rate
 from src.model import generate
 
@@ -88,77 +94,6 @@ log = get_logger("phase1_subspace_ablation")
 def _gen(bundle, prompts, max_new_tokens=96):
     return [generate(bundle, p, max_new_tokens=max_new_tokens, temperature=0.0)
             for p in prompts]
-
-
-def extract_lda_top_k_orthogonal(H_L: torch.Tensor, L_L: torch.Tensor, k: int,
-                                   bootstrap_seed: int | None = None) -> torch.Tensor:
-    """Iteratively fit LDA on (H, L). With bootstrap_seed != None, resample
-    BOTH H and L with replacement first — used to produce multiple bootstrap
-    LDA-top-1 directions for the causal-consistency test.
-    """
-    if bootstrap_seed is not None:
-        rng = np.random.default_rng(bootstrap_seed)
-        idx_h = rng.choice(len(H_L), size=len(H_L), replace=True)
-        idx_l = rng.choice(len(L_L), size=len(L_L), replace=True)
-        H_L = H_L[idx_h]
-        L_L = L_L[idx_l]
-
-    X = torch.cat([H_L, L_L], dim=0).numpy().astype(np.float64)
-    y = np.array([1] * len(H_L) + [0] * len(L_L))
-    X_curr = X.copy()
-    directions = []
-    for i in range(k):
-        lda = LinearDiscriminantAnalysis(solver="svd").fit(X_curr, y)
-        d = lda.coef_[0]
-        n = float(np.linalg.norm(d))
-        if n < 1e-10:
-            log.warning("LDA iteration %d: direction norm near zero, stopping", i)
-            break
-        d = d / n
-        for d_prev in directions:
-            d = d - float(np.dot(d, d_prev)) * d_prev
-        d = d / (np.linalg.norm(d) + 1e-12)
-        directions.append(d)
-        X_curr = X_curr - np.outer(X_curr @ d, d)
-    return torch.tensor(np.array(directions), dtype=torch.float32)
-
-
-def _ablate_subspace_hook_factory(model, dirs_dev: list[torch.Tensor]):
-    """Build a hook that subtracts the projection onto EACH direction in the list."""
-    from transformer_lens.hook_points import HookPoint
-
-    def hook_fn(x: torch.Tensor, hook: HookPoint) -> torch.Tensor:
-        for d in dirs_dev:
-            coeff = (x * d).sum(dim=-1, keepdim=True)
-            x = x - coeff * d
-        return x
-
-    return hook_fn
-
-
-from contextlib import contextmanager
-
-_FAITHFUL_HOOK_SUFFIXES = ("hook_resid_pre", "hook_resid_mid", "hook_resid_post",
-                            "hook_attn_out", "hook_mlp_out")
-
-
-@contextmanager
-def ablate_subspace(model, dirs: torch.Tensor):
-    """Multi-direction Arditi ablation: at every residual hook, subtract the
-    projection onto each of the directions in `dirs` (shape [k, d_model])."""
-    dirs_dev = [d.to(model.cfg.device).to(model.W_E.dtype) for d in dirs]
-    # Assert unit-norm
-    for i, d in enumerate(dirs_dev):
-        n = d.norm().item()
-        if abs(n - 1.0) > 1e-2:
-            raise ValueError(f"direction {i} not unit norm: {n}")
-    hook_fn = _ablate_subspace_hook_factory(model, dirs_dev)
-    hooks = []
-    for L in range(model.cfg.n_layers):
-        for suffix in _FAITHFUL_HOOK_SUFFIXES:
-            hooks.append((f"blocks.{L}.{suffix}", hook_fn))
-    with model.hooks(fwd_hooks=hooks):
-        yield
 
 
 def main() -> int:
@@ -219,7 +154,7 @@ def main() -> int:
     bootstrap_seeds = [101, 202, 303]
     lda_top1_bootstraps = []
     for bs in bootstrap_seeds:
-        d = extract_lda_top_k_orthogonal(train_h_L13, train_l_L13, k=1, bootstrap_seed=bs)[0]
+        d = lda_directions(train_h_L13, train_l_L13, k=1, bootstrap_seed=bs)[0]
         lda_top1_bootstraps.append(d)
     # Cosines: between bootstrap LDA dirs, and vs diff-of-means
     cos_lda_pairs = [
@@ -234,7 +169,7 @@ def main() -> int:
 
     # Top-5 orthogonal subspace from a single bootstrap (the "subspace ablation" cell)
     log.info("extracting top-%d LDA orthogonal subspace from bootstrap seed=101 ...", args.lda_k)
-    lda_subspace = extract_lda_top_k_orthogonal(train_h_L13, train_l_L13,
+    lda_subspace = lda_directions(train_h_L13, train_l_L13,
                                                   k=args.lda_k, bootstrap_seed=101)
 
     cos_d_l3 = float((d_hat_L13 * d_hat_L3).sum())

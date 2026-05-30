@@ -19,6 +19,7 @@ import torch
 from src.directions import (
     bypass_gap,
     diff_of_means,
+    lda_directions,
     project,
     random_unit_vector,
     unit,
@@ -123,6 +124,63 @@ class TestRoundtrip:
 
         # All harmful projections > all harmless projections
         assert proj_h.min().item() > proj_l.max().item()
+
+
+class TestLdaDirections:
+    """lda_directions is a peer to diff_of_means as an extraction primitive."""
+
+    def test_k1_unit_norm(self):
+        torch.manual_seed(0)
+        n, d = 60, 16
+        h = torch.randn(n, d) * 0.3
+        h[:, 0] += 4.0
+        l = torch.randn(n, d) * 0.3
+        l[:, 0] -= 4.0
+        dirs = lda_directions(h, l, k=1)
+        assert dirs.shape == (1, d)
+        assert abs(dirs[0].norm().item() - 1.0) < 1e-5
+
+    def test_k1_recovers_separation_axis(self):
+        """Top LDA direction on a two-cluster setup should align with axis 0."""
+        torch.manual_seed(0)
+        n, d = 80, 16
+        h = torch.randn(n, d) * 0.2
+        h[:, 0] += 5.0
+        l = torch.randn(n, d) * 0.2
+        l[:, 0] -= 5.0
+        dirs = lda_directions(h, l, k=1)
+        # Either +x or -x; magnitude of x-component dominates
+        assert abs(dirs[0, 0].item()) > 0.9
+
+    def test_orthogonal_when_k_gt_1(self):
+        torch.manual_seed(1)
+        n, d = 80, 20
+        h = torch.randn(n, d) * 0.5
+        h[:, 0] += 4.0
+        h[:, 1] += 2.0
+        l = torch.randn(n, d) * 0.5
+        l[:, 0] -= 4.0
+        l[:, 1] -= 2.0
+        dirs = lda_directions(h, l, k=3)
+        assert dirs.shape == (3, d)
+        # Each pair orthogonal
+        for i in range(3):
+            for j in range(i + 1, 3):
+                cos = float(torch.dot(dirs[i], dirs[j]))
+                assert abs(cos) < 1e-4, f"dirs[{i}] · dirs[{j}] = {cos}"
+
+    def test_bootstrap_seed_changes_direction(self):
+        """Bootstrap resampling should perturb the recovered direction."""
+        torch.manual_seed(0)
+        n, d = 40, 8
+        h = torch.randn(n, d) * 0.3
+        h[:, 0] += 3.0
+        l = torch.randn(n, d) * 0.3
+        l[:, 0] -= 3.0
+        d_plain = lda_directions(h, l, k=1)
+        d_boot = lda_directions(h, l, k=1, bootstrap_seed=42)
+        # Different bootstrap → different direction (but both still close to axis 0)
+        assert not torch.allclose(d_plain, d_boot)
 
 
 class TestBypassGap:

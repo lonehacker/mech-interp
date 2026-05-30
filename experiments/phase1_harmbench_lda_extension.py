@@ -70,8 +70,8 @@ from experiments.phase1_harmbench_eval import (
     load_harmbench,
     summarize,
 )
-from experiments.phase1_subspace_ablation import extract_lda_top_k_orthogonal
 from src.activations import cache_resid
+from src.directions import lda_directions
 from src.directions import ablate_dir, diff_of_means, unit
 
 log = get_logger("phase1_harmbench_lda_ext")
@@ -125,7 +125,7 @@ def main() -> int:
         L = cached_activations(key_l, lambda: cache_resid(bundle, harmless, layer=args.extract_layer, show_progress=False))
         d_hat = unit(diff_of_means(H, L))
         log.info("extracting LDA-top-1 via bootstrap (seed=%d) ...", args.bootstrap_seed)
-        lda_dirs = extract_lda_top_k_orthogonal(H, L, k=1, bootstrap_seed=args.bootstrap_seed)
+        lda_dirs = lda_directions(H, L, k=1, bootstrap_seed=args.bootstrap_seed)
         lda_top1 = lda_dirs[0]
         cos_with_dhat = float((lda_top1 * d_hat).sum())
         log.info("LDA-top-1 extracted | cos(LDA-top-1, d_hat) = %.4f (should be near 0)",

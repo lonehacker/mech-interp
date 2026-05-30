@@ -10,7 +10,7 @@ geometry-of-refusal, Arditi's refusal_direction, Karpathy's nanoGPT).
 src/                  → core library — produces tensors / contexts; never interprets
   model.py            → load model, format prompts, tokenize, generate
   activations.py      → cache residual stream at the last token
-  directions.py       → diff-of-means + ablate / add hooks
+  directions.py       → extraction (diff-of-means, LDA) + hooks (ablate_dir, ablate_subspace, add_dir) + bypass_gap
   causal_metric.py    → first-token logit-shift continuous metric
   eval.py             → substring refusal scorer
   eval_llm.py         → calibrated Claude judge

@@ -52,8 +52,8 @@ from experiments._runner import (
     write_json,
 )
 from experiments.phase1_harmbench_eval import load_harmbench
-from experiments.phase1_subspace_ablation import extract_lda_top_k_orthogonal
 from src.activations import cache_resid
+from src.directions import lda_directions
 from src.causal_metric import (
     COMPLIANCE_FIRST_TOKEN_IDS_GEMMA2,
     REFUSAL_FIRST_TOKEN_IDS_GEMMA2,
@@ -156,7 +156,7 @@ def main() -> int:
 
     # Classification-inert (LDA-bootstrap-top-1) — 5 different bootstrap seeds
     for bs in [101, 202, 303, 404, 505][:args.n_lda_bootstraps]:
-        d = extract_lda_top_k_orthogonal(H, L, k=1, bootstrap_seed=bs)[0]
+        d = lda_directions(H, L, k=1, bootstrap_seed=bs)[0]
         cells.append({"name": f"LDA_top1_bs{bs}", "category": "inert_lda",
                        "direction": d, "metadata": {"bootstrap_seed": bs}})
 

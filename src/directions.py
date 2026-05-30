@@ -20,7 +20,9 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 
+import numpy as np
 import torch
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from transformer_lens import HookedTransformer
 from transformer_lens.hook_points import HookPoint
 
@@ -140,6 +142,81 @@ def add_dir(
         return x + add_vec
 
     with model.hooks(fwd_hooks=[(f"blocks.{layer}.{hook_suffix}", hook_fn)]):
+        yield
+
+
+def lda_directions(
+    H: torch.Tensor,
+    L: torch.Tensor,
+    k: int = 1,
+    bootstrap_seed: int | None = None,
+) -> torch.Tensor:
+    """Top-k orthogonal Linear-Discriminant directions over (H, L).
+
+    Iteratively fits LDA on (H, L), orthogonalizes each new direction against
+    the previous ones, and deflates the data matrix along that direction
+    before refitting. Returns a [k, d_model] tensor of unit vectors. Peer to
+    `diff_of_means(H, L)` as an extraction method.
+
+    `bootstrap_seed` (optional): resample BOTH H and L with replacement before
+    fitting — used for bootstrap-stability tests (see Phase 1 hardened-subspace
+    runner).
+    """
+    if bootstrap_seed is not None:
+        rng = np.random.default_rng(bootstrap_seed)
+        idx_h = rng.choice(len(H), size=len(H), replace=True)
+        idx_l = rng.choice(len(L), size=len(L), replace=True)
+        H = H[idx_h]
+        L = L[idx_l]
+
+    X = torch.cat([H, L], dim=0).numpy().astype(np.float64)
+    y = np.array([1] * len(H) + [0] * len(L))
+    X_curr = X.copy()
+    directions: list[np.ndarray] = []
+    for _ in range(k):
+        lda = LinearDiscriminantAnalysis(solver="svd").fit(X_curr, y)
+        d = lda.coef_[0]
+        n = float(np.linalg.norm(d))
+        if n < 1e-10:
+            break
+        d = d / n
+        for d_prev in directions:
+            d = d - float(np.dot(d, d_prev)) * d_prev
+        d = d / (np.linalg.norm(d) + 1e-12)
+        directions.append(d)
+        X_curr = X_curr - np.outer(X_curr @ d, d)
+    return torch.tensor(np.array(directions), dtype=torch.float32)
+
+
+@contextmanager
+def ablate_subspace(
+    model: HookedTransformer,
+    dirs: torch.Tensor,
+) -> Iterator[None]:
+    """Multi-direction Arditi ablation: project EACH direction out of every
+    residual hook for the `with` block.
+
+    `dirs` is [k, d_model], each row a unit vector. Peer to `ablate_dir` —
+    same hook surfaces (_FAITHFUL_HOOK_SUFFIXES at every layer), generalized
+    to k directions instead of one.
+    """
+    dirs_dev = [
+        _validate_unit_and_prep(dirs[i], model)
+        for i in range(dirs.shape[0])
+    ]
+
+    def hook_fn(x: torch.Tensor, hook: HookPoint) -> torch.Tensor:
+        for d in dirs_dev:
+            coeff = (x * d).sum(dim=-1, keepdim=True)
+            x = x - coeff * d
+        return x
+
+    hooks = [
+        (f"blocks.{L}.{suffix}", hook_fn)
+        for L in range(model.cfg.n_layers)
+        for suffix in _FAITHFUL_HOOK_SUFFIXES
+    ]
+    with model.hooks(fwd_hooks=hooks):
         yield
 
 

@@ -26,18 +26,26 @@ Layer selection PRODUCES a layer. It is not an extraction method.
 
 ### Axis 2 — Direction extraction method
 
-Given a layer, compute the direction vector. Two methods:
+Given a layer, compute the direction vector. The two primaries in Phase 2:
 
 - **diff-of-means** → the vector we call **`d̂`**. Statistical: difference of
-  class centroids at the chosen layer/position.
+  class centroids at the chosen layer/position. Implementation:
+  `src.directions.diff_of_means`.
 - **RDO** (Refusal Direction Optimization, Wollschläger 2025) → the vector we
   call **`d_rdo`**. Gradient: optimize a direction at a FIXED layer such that
-  its ablation maximizes refusal drop.
+  its ablation maximizes refusal drop. Implementation: external,
+  `~/safe_ai/geometry-of-refusal/rdo.py`.
 
 **`d̂` and `d_rdo` are different vectors even at the same layer.**
 `d̂` is by definition the diff-of-means direction — **RDO does not produce `d̂`.**
 The backwards-decomposition step computes `cos(d_rdo, d̂)` precisely to compare
 the two extractors; calling RDO's output `d̂` destroys the comparison.
+
+A third peer extraction method, **LDA** (`src.directions.lda_directions`),
+returned top-k orthogonal Fisher-LDA directions; Phase 1 used it for the
+bootstrap-stability check (HarmBench `phase1_harmbench_lda_extension`). LDA
+is not the focus of Phase 2's 2×2 but lives in the same `src/` layer as
+diff-of-means and `ablate_subspace`.
 
 ### Why "bypass" shows up in both axes
 
