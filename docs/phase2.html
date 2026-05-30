@@ -208,9 +208,29 @@ The headline so far is empirical: AUC picked an inert layer, bypass-gap picked t
 The two layer-selection criteria don't converge: they find directions with cosine ≈ 0.14 on the same data. That's a small overlap, not zero — but the directions are not the same thing. The L14 direction lives mostly in one subspace; the L22 direction lives mostly in another.
 </p>
 
-<h3 id="L0">Future work: the L0-separability capstone</h3>
+<h3 id="L0">The L0-separability capstone</h3>
 <p>
-The cosines above show that AUC-based and bypass-gap-based layer-selection find substantially different directions on the same data — that's the empirical result. The mechanistic capstone would be one more cosine: <code>cos(d̂_L22, d̂_L0_matched)</code>, where <code>d̂_L0_matched</code> is the diff-of-means direction extracted at the embedding layer L0 on the same matched contrast. If that cosine is near zero, the L22 causal direction is nearly perpendicular to the L0-separability subspace — and since AUC ranks directions by classification utility, the orthogonality would explain <em>why</em> AUC fails to find the causal direction on saturated models. That extension is queued as a follow-up; the cosines above are sufficient to support the empirical headline ("AUC and bypass-gap find substantially different directions") and the methodological recipe in §7. The structural-orthogonality explanation gets stated only once the L0 cosine is in.
+The L0 cosines add one more row to the matrix and tell a slightly subtler structural story than the pre-registered "L22 ⊥ L0 explains everything" prediction:
+</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Cosine vs <code>d̂_L0_matched</code></th><th>Value</th></tr></thead>
+<tbody>
+<tr><td><code>cos(d̂_L22_pos−1, d̂_L0_matched)</code></td><td class="num">+0.034</td></tr>
+<tr><td><code>cos(d̂_L22_pos−4, d̂_L0_matched)</code></td><td class="num">+0.037</td></tr>
+<tr><td><code>cos(d̂_L14_matched, d̂_L0_matched)</code></td><td class="num">+0.007</td></tr>
+<tr><td><code>cos(d̂_L14_old, d̂_L0_matched)</code></td><td class="num">−0.051</td></tr>
+</tbody>
+</table>
+</div>
+<p>
+The L22 causal direction is essentially orthogonal to the L0-embedding separability direction (cos ≈ +0.034 at pos−1, +0.037 at pos−4). That's one piece of the mechanistic story — AUC at L0 ranks directions by classification utility <em>within the L0-separability subspace</em>, and the causal direction lives outside it. Picking by classification AUC at L0 cannot point at the causal direction because the causal direction isn't in the subspace AUC ranks over.
+</p>
+<p>
+But the L14 direction is <em>also</em> orthogonal to L0 separability (cos ≈ +0.007). So orthogonality-to-L0 alone doesn't separate inert (L14) from causal (L22). What it does say is structural: in residual-stream geometry there's a small subspace where vocabulary/length features classify the contrast cleanly (the L0 direction lives in it), and an enormous orthogonal complement containing both inert directions (L14 diff-of-means picks one) and the causal direction (bypass-gap-layer-selection picks another). AUC saturates because some direction in <em>every</em> layer's residual stream classifies the contrast cleanly. Causal-effect selection is what picks among the orthogonal-to-L0-separability directions; classification accuracy can't.
+</p>
+<p>
+The empirical headline (AUC at saturated-separability fails; bypass-gap recovers) is what the user of this finding needs. The L0 cosines firm the mechanistic "why" one step further: the causal direction is not just at a different layer than where AUC peaked, it's in a different subspace than the one classification accuracy rewards.
 </p>
 
 <!-- ========= 6. Caveat ========= -->
