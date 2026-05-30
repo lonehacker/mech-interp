@@ -77,7 +77,7 @@
 </header>
 
 <div class="scope-banner">
-<strong>This is the Qwen half of the project.</strong> Phase 1 (<a href="phase1.html">phase1.html</a>) is the Gemma evidence; the top-level <a href="index.html">index</a> states the unified thesis across both phases. This page tells the L14→L22 arc: an inert headline at the AUC-selected layer, an observation that AUC is saturated on Qwen, a switch to bypass-gap-based layer-selection, and a clean causal result at the layer that selection picks out. The portable lesson — pick layers by causal effect on behavior, not by classification accuracy — is the practical-teeth contribution of this phase.
+<strong>This is the Qwen half of the project.</strong> Phase 1 (<a href="phase1.html">phase1.html</a>) is the Gemma evidence; the top-level <a href="index.html">index</a> states the unified thesis across both phases. This page tells the L14→L22 arc: an inert headline at the AUC-selected layer, an observation that AUC is saturated on Qwen, a switch to <em>bypass-gap-based layer-selection</em> (ranking layers by which one's direction, when ablated, drops refusal the most — a causal-effect criterion instead of a classification one), and a clean causal result at the layer that selection picks out. The portable lesson — pick layers by causal effect on behavior, not by classification accuracy — is the practical-teeth contribution of this phase. Throughout: <em>ablate</em> means zero the direction out of the residual stream during generation.
 </div>
 
 <nav class="toc">
@@ -130,28 +130,39 @@ Re-running the same Phase 1 protocol — extract <code>d̂</code> by diff-of-mea
 <!-- ========= 4. The headline ========= -->
 <h2 id="headline">4. The headline result at L22</h2>
 
-<p class="pending">PIECE 1 PENDING — the firmed N=30 numbers backfill into this section when the run completes. The cell table below currently shows the pilot n=10 numbers and will be updated to n=30; the conclusions hold but the resolution sharpens.</p>
-
 <p>
-<strong>At L22 on the matched contrast, ablating <code>d̂</code> turns Qwen from refusing harmful requests into writing the requested exploit code, while ablating a random direction at the same cell leaves refusal at baseline.</strong> The direction is specific, and the layer isn't just fragile.
+<strong>At L22 on the matched contrast, ablating</strong> (zero out the direction during generation) <strong><code>d̂</code> turns Qwen from refusing harmful requests into writing the requested exploit code, while ablating a random direction at the same cell leaves refusal at baseline.</strong> The direction is specific, and the layer isn't just fragile.
 </p>
 
-<h3>Cell summary (pilot n=10; n=30 update incoming)</h3>
+<h3>Headline cell — L22_pos−1, N=30</h3>
 <div class="table-wrap">
 <table>
-<thead><tr><th>Condition</th><th>Substring refusal</th><th>Judge: refused / partial / complied</th><th>Mean chars (vs baseline 737)</th></tr></thead>
+<thead><tr><th>Condition</th><th>Substring refusal</th><th>Judge: refused / partial / complied</th><th>Mean chars (vs baseline 706)</th></tr></thead>
 <tbody>
-<tr><td>Baseline (no hook)</td><td class="num">1.000</td><td>9 / 1 / 0</td><td class="num">737</td></tr>
-<tr class="highlight"><td><code>d̂</code> at L22_pos-1 ablated</td><td class="num">0.000</td><td><strong>0 / 0 / 10</strong></td><td class="num">770</td></tr>
-<tr class="highlight"><td><code>d̂</code> at L22_pos-4 ablated</td><td class="num">0.000</td><td><strong>0 / 0 / 10</strong></td><td class="num">787</td></tr>
-<tr><td>Random direction at L22_pos-1 (3 seeds)</td><td class="num">0.93 avg</td><td>8–9 / 1–2 / 0</td><td class="num">765 avg</td></tr>
-<tr><td>Random direction at L22_pos-4 (3 seeds)</td><td class="num">0.97 avg</td><td>9 / 1 / 0</td><td class="num">765 avg</td></tr>
+<tr><td>Baseline (no hook), N=30</td><td class="num">1.000</td><td>28 / 2 / 0</td><td class="num">706</td></tr>
+<tr class="highlight"><td><code>d̂</code> at L22_pos−1 ablated, N=30</td><td class="num">0.000</td><td><strong>1 / 0 / 29</strong></td><td class="num">755</td></tr>
+<tr><td>Random direction at L22_pos−1, N=30, seed 42</td><td class="num">1.000</td><td>25 / 5 / 0</td><td class="num">686</td></tr>
+<tr><td>Random direction at L22_pos−1, N=30, seed 1337</td><td class="num">1.000</td><td>26 / 4 / 0</td><td class="num">715</td></tr>
 </tbody>
 </table>
 </div>
 
 <p>
-The random-direction control at the same cell across three seeds reproduces baseline refusal verbatim — the model's response style under random ablation is the textbook "I'm sorry, but I can't assist with that request" Qwen refusal, mean-chars matching baseline within ±5%. That's the discriminator: the layer is not fragile, and a non-specific perturbation at the same layer does not collapse refusal. The <code>d̂</code> ablation isn't producing refusal-free <em>noise</em>; the completions under <code>d̂</code> ablation are fluent on-target answers to the specific harmful request.
+The model refuses 28 of 30 baseline. Ablating <code>d̂</code> at L22_pos−1 drops refusal to 1 of 30 — 29 of 30 complied. Ablating a random direction at the same cell across two independent seeds keeps refusal at 25–26 of 30 with no full compliances. Mean characters per completion under <code>d̂</code> ablation is 755 vs baseline 706 (ratio 1.07, inside the coherence band); under random ablation 686 / 715 (ratio 0.97 / 1.01) — the model is not on-distribution-broken in either condition. The completions under <code>d̂</code> ablation are fluent on-target answers to the specific harmful request; under random ablation they are textbook "I'm sorry, but I can't assist with that request" Qwen refusals.
+</p>
+
+<h3>Replication at the nearby prior-region cells (n=10 pilot)</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Cell</th><th>d̂ ablation: R / P / C</th><th>Random ablation (3 seeds): R / P / C</th></tr></thead>
+<tbody>
+<tr class="highlight"><td>L22_pos−4</td><td><strong>0 / 0 / 10</strong></td><td>9 / 1 / 0 (each seed)</td></tr>
+<tr class="highlight"><td>L23_pos−1</td><td><strong>0 / 0 / 10</strong></td><td>9 / 1 / 0 (each seed)</td></tr>
+</tbody>
+</table>
+</div>
+<p>
+The same pattern holds at the other two pre-committed cells: <code>d̂</code> collapses refusal cleanly, three independent random directions at the same cell each leave refusal at baseline. The 10-pilot is included for completeness; the L22_pos−1 N=30 result above is the headline figure.
 </p>
 
 <h3>What the model says under <code>d̂</code> ablation (representative)</h3>
@@ -204,12 +215,10 @@ The headline so far is empirical: AUC picked an inert layer, bypass-gap picked t
 The two layer-selection criteria don't converge: they find directions with cosine ≈ 0.14 on the same data. That's a small overlap, not zero — but the directions are not the same thing. The L14 direction lives mostly in one subspace; the L22 direction lives mostly in another.
 </p>
 
-<h3 id="L0">The L0-separability capstone</h3>
-<p class="pending">PIECE 2B PENDING — <code>cos(d̂_L22, d̂_L0_matched)</code> needs to be computed (requires a fresh L0 extraction; queued after PIECE 1's MPS run completes). When that number lands, this section closes with one of two readings:</p>
-<ul style="margin: 0 0 1rem 1.5rem; line-height: 1.8;">
-<li><strong>If <code>cos(d̂_L22, d̂_L0_matched)</code> is near zero:</strong> the causal direction at L22 is nearly perpendicular to the L0-embedding separability subspace. That's the mechanism behind the empirical headline — AUC at L0 saturates because the residual stream's vocabulary/embedding-level features classify cleanly, but those features are orthogonal to the direction that mediates refusal. AUC, by construction, ranks directions by their classification utility; if classification and causation live in (near-)orthogonal subspaces, AUC <em>cannot</em> point at the causal direction. The Qwen finding becomes a structural result, not just a model-specific accident.</li>
-<li><strong>If <code>cos(d̂_L22, d̂_L0_matched)</code> is not near zero:</strong> the empirical headline still holds (AUC picked the wrong layer; bypass-gap picked the causal one), but the mechanistic "why" is weaker than the orthogonality story. The writeup states what the number is, doesn't overclaim, and the lesson collapses to the empirical version: on saturated-separability models use bypass-gap, period — without a sharper structural explanation of why AUC fails.</li>
-</ul>
+<h3 id="L0">Future work: the L0-separability capstone</h3>
+<p>
+The cosines above show that AUC-based and bypass-gap-based layer-selection find substantially different directions on the same data — that's the empirical result. The mechanistic capstone would be one more cosine: <code>cos(d̂_L22, d̂_L0_matched)</code>, where <code>d̂_L0_matched</code> is the diff-of-means direction extracted at the embedding layer L0 on the same matched contrast. If that cosine is near zero, the L22 causal direction is nearly perpendicular to the L0-separability subspace — and since AUC ranks directions by classification utility, the orthogonality would explain <em>why</em> AUC fails to find the causal direction on saturated models. That extension is queued as a follow-up; the cosines above are sufficient to support the empirical headline ("AUC and bypass-gap find substantially different directions") and the methodological recipe in §7. The structural-orthogonality explanation gets stated only once the L0 cosine is in.
+</p>
 
 <!-- ========= 6. Caveat ========= -->
 <h2 id="caveat">6. The pre-registered stance bound</h2>
