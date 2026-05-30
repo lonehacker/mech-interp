@@ -11,12 +11,11 @@ Run:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 import torch
 
-from src.probes import (
+from mech_security.probes import (
     probe_layer_sweep,
     shuffled_control_sweep,
     train_probe,

@@ -14,10 +14,9 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from experiments._runner import RESULTS, get_logger, new_run_dir, write_json
-from src.eval_llm import judge_many
+from mech_security.eval_llm import judge_many
 
 log = get_logger("rejudge")
 

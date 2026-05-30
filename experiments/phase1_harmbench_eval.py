@@ -36,7 +36,6 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Auto-load mech-security/.env so ANTHROPIC_API_KEY is available before the
 # scorer arg check. (Source: this runner's early env check would otherwise
@@ -59,9 +58,9 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import ablate_dir, diff_of_means, random_unit_vector, unit
-from src.model import generate
+from mech_security.activations import cache_resid
+from mech_security.directions import ablate_dir, diff_of_means, random_unit_vector, unit
+from mech_security.model import generate
 
 log = get_logger("phase1_harmbench")
 
@@ -135,13 +134,13 @@ def _judge_all(prompts_completions: list[tuple[str, str]], scorer: str,
             "raw": "substring-scorer",
         } for _, c in prompts_completions]
     if scorer == "llm":
-        from src.eval_llm import judge_many
+        from mech_security.eval_llm import judge_many
         verdicts = judge_many(prompts_completions, show_progress=True)
         return [{"label": v.label, "raw": v.raw} for v in verdicts]
     if scorer == "dual_judge":
         # Primary: Haiku 4.5 (the calibrated, faster judge).
         # Cross-check: a stronger model (Opus by default).
-        from src.eval_llm import JUDGE_MODEL, judge_many
+        from mech_security.eval_llm import JUDGE_MODEL, judge_many
         log.info("dual judge: primary=%s, cross-check=%s", JUDGE_MODEL, judge_model_2)
         v1 = judge_many(prompts_completions, model=JUDGE_MODEL, show_progress=True)
         v2 = judge_many(prompts_completions, model=judge_model_2, show_progress=True)

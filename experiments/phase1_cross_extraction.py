@@ -37,7 +37,6 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 from sklearn.metrics import roc_auc_score
@@ -53,8 +52,8 @@ from experiments._runner import (
     write_json,
 )
 from experiments.phase1_harmbench_eval import load_harmbench
-from src.activations import cache_resid, cache_resid_all_layers
-from src.directions import diff_of_means, project, unit
+from mech_security.activations import cache_resid, cache_resid_all_layers
+from mech_security.directions import diff_of_means, project, unit
 
 log = get_logger("phase1_cross_extract")
 

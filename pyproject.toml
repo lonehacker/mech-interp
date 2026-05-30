@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mech_security"
+version = "0.1.0"
+description = "Mechanistic interpretability of refusal directions in instruction-tuned LLMs"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "lonehacker"}]
+
+# Runtime deps live in requirements.txt — declared here for completeness but
+# not version-pinned. `pip install -e .` will resolve them.
+dependencies = [
+    "torch",
+    "transformers",
+    "transformer-lens",
+    "scikit-learn",
+    "numpy",
+    "tqdm",
+    "anthropic",
+    "python-dotenv",
+    "jaxtyping",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+# Discover both mech_security (the library) and experiments (the runners).
+# Runners are technically scripts but expose stable entry-point modules used by
+# tests + import-validation, so installing them keeps imports clean.
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mech_security*", "experiments*"]
+exclude = ["tests*", "artifacts*", "data*", "results*"]

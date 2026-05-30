@@ -27,7 +27,6 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
 
@@ -47,8 +46,8 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid_all_layers
-from src.probes import probe_layer_sweep, shuffled_control_sweep
+from mech_security.activations import cache_resid_all_layers
+from mech_security.probes import probe_layer_sweep, shuffled_control_sweep
 
 log = get_logger("phase1_step4")
 

@@ -32,7 +32,6 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
 
@@ -52,16 +51,16 @@ from experiments._runner import (
     write_json,
 )
 from experiments.phase1_harmbench_eval import load_harmbench
-from src.activations import cache_resid
-from src.directions import lda_directions
-from src.causal_metric import (
+from mech_security.activations import cache_resid
+from mech_security.directions import lda_directions
+from mech_security.causal_metric import (
     COMPLIANCE_FIRST_TOKEN_IDS_GEMMA2,
     REFUSAL_FIRST_TOKEN_IDS_GEMMA2,
     causal_effect_under_hook,
     compute_causal_effect,
     verify_template_boundary,
 )
-from src.directions import diff_of_means, random_unit_vector, unit
+from mech_security.directions import diff_of_means, random_unit_vector, unit
 
 log = get_logger("phase1_hardened")
 

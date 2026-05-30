@@ -33,7 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from experiments._runner import extract_d_hat, get_model  # noqa: E402
-from src.model import format_prompt_for_bundle  # noqa: E402
+from mech_security.model import format_prompt_for_bundle  # noqa: E402
 
 GOR_ROOT = Path.home() / "safe_ai" / "geometry-of-refusal"
 MODEL_PATH = "Qwen/Qwen2.5-3B-Instruct"

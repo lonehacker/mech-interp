@@ -26,7 +26,6 @@ import random
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
 
@@ -43,9 +42,9 @@ from experiments._runner import (
     stratified_split,
     write_json,
 )
-from src.directions import ablate_dir, add_dir, random_unit_vector
-from src.eval import is_refusal
-from src.model import format_prompt_for_bundle
+from mech_security.directions import ablate_dir, add_dir, random_unit_vector
+from mech_security.eval import is_refusal
+from mech_security.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step3e")
 
@@ -231,7 +230,7 @@ def main() -> int:
     )
     # Always judge ablation cells; only judge addition cells with lift
     log.info("=== PART 3: judge ablation cells (always) + lifted addition cells ===")
-    from src.eval_llm import judge_many
+    from mech_security.eval_llm import judge_many
     for name in abl_cells:
         pairs = list(zip(h_test_m, abl_cells[name]))
         verdicts = judge_many(pairs, show_progress=False)

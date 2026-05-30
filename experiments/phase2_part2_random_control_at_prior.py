@@ -36,7 +36,6 @@ from pathlib import Path
 import dotenv
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 dotenv.load_dotenv()
 
 from experiments._runner import (  # noqa: E402
@@ -46,9 +45,9 @@ from experiments._runner import (  # noqa: E402
     new_run_dir,
     write_json,
 )
-from src.directions import bypass_gap, random_unit_vector  # noqa: E402
-from src.eval import is_refusal  # noqa: E402
-from src.eval_llm import JUDGE_MODEL, judge_many, refusal_rate_llm  # noqa: E402
+from mech_security.directions import bypass_gap, random_unit_vector  # noqa: E402
+from mech_security.eval import is_refusal  # noqa: E402
+from mech_security.eval_llm import JUDGE_MODEL, judge_many, refusal_rate_llm  # noqa: E402
 
 log = get_logger("phase2_part2_random_at_prior")
 

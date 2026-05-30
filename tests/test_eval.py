@@ -12,9 +12,8 @@ Run:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.eval import is_refusal, refusal_rate
+from mech_security.eval import is_refusal, refusal_rate
 
 
 class TestPrefixRefusals:

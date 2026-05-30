@@ -44,7 +44,6 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Auto-load .env for ANTHROPIC_API_KEY
 try:
@@ -70,9 +69,9 @@ from experiments.phase1_harmbench_eval import (
     load_harmbench,
     summarize,
 )
-from src.activations import cache_resid
-from src.directions import lda_directions
-from src.directions import ablate_dir, diff_of_means, unit
+from mech_security.activations import cache_resid
+from mech_security.directions import lda_directions
+from mech_security.directions import ablate_dir, diff_of_means, unit
 
 log = get_logger("phase1_harmbench_lda_ext")
 

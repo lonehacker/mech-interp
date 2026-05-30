@@ -36,7 +36,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
 
@@ -51,8 +50,8 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import diff_of_means, project, unit
+from mech_security.activations import cache_resid
+from mech_security.directions import diff_of_means, project, unit
 
 log = get_logger("phase1_step3c")
 

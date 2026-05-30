@@ -35,7 +35,6 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
 
@@ -54,10 +53,10 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import add_dir, diff_of_means, unit
-from src.eval import coherence_ok, refusal_rate
-from src.model import generate
+from mech_security.activations import cache_resid
+from mech_security.directions import add_dir, diff_of_means, unit
+from mech_security.eval import coherence_ok, refusal_rate
+from mech_security.model import generate
 
 log = get_logger("phase1_step3b")
 
@@ -134,7 +133,7 @@ def main() -> int:
     # BUT: the right interpretive unit for cross-model portability (Phase 2) is
     # the natural scale AT THE INJECTION LAYER. We log and persist both —
     # see `natural_scale_per_layer` in the result record below.
-    from src.directions import project
+    from mech_security.directions import project
     train_h_proj_mean = float(project(train_h_acts, d_hat).mean())
     train_l_proj_mean = float(project(train_l_acts, d_hat).mean())
     natural_scale = train_h_proj_mean - train_l_proj_mean  # harmful-vs-harmless gap

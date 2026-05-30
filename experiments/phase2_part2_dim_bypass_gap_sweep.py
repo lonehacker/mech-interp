@@ -41,7 +41,6 @@ from pathlib import Path
 import dotenv
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 dotenv.load_dotenv()  # for ANTHROPIC_API_KEY
 
 from experiments._runner import (  # noqa: E402
@@ -52,11 +51,11 @@ from experiments._runner import (  # noqa: E402
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid  # noqa: E402
-from src.directions import ablate_dir, diff_of_means, random_unit_vector, unit  # noqa: E402
-from src.eval import is_refusal  # noqa: E402
-from src.eval_llm import JUDGE_MODEL, judge_many, refusal_rate_llm  # noqa: E402
-from src.model import format_prompt_for_bundle  # noqa: E402
+from mech_security.activations import cache_resid  # noqa: E402
+from mech_security.directions import ablate_dir, diff_of_means, random_unit_vector, unit  # noqa: E402
+from mech_security.eval import is_refusal  # noqa: E402
+from mech_security.eval_llm import JUDGE_MODEL, judge_many, refusal_rate_llm  # noqa: E402
+from mech_security.model import format_prompt_for_bundle  # noqa: E402
 
 log = get_logger("phase2_part2")
 

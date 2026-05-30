@@ -12,11 +12,10 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from src.causal_metric import (
+from mech_security.causal_metric import (
     COMPLIANCE_FIRST_TOKEN_IDS_GEMMA2,
     REFUSAL_FIRST_TOKEN_IDS_GEMMA2,
     VALIDATED_TOKEN_SETS,

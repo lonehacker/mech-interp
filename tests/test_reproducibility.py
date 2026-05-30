@@ -20,7 +20,6 @@ from pathlib import Path
 
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 class TestCacheKeyInvariants:
@@ -34,14 +33,46 @@ class TestCacheKeyInvariants:
         assert h == "0da0c6b777f2aaa1", f"got {h}"
 
     def test_content_hash_with_extra(self):
+        """Pin a content_hash output for the *actual* Phase 2 step3e
+        extra-string. bundle.name is the HF model path verbatim
+        ('Qwen/Qwen2.5-3B-Instruct'), NOT lowercased — caught this one
+        the hard way during the src→mech_security rename verification."""
         from experiments._runner import content_hash
-        # Simulate the Phase 2 step3 extra-string pattern
-        bundle_name = "qwen-qwen2.5-3b-instruct"
+        bundle_name = "Qwen/Qwen2.5-3B-Instruct"  # exact value from load_model
         dtype = "torch.bfloat16"
         extra = f"{bundle_name}|dtype={dtype}|L14|resid_post|last_token|matched_v2|harmful_train"
         h = content_hash(["prompt1", "prompt2", "prompt3"], extra=extra)
         # Frozen
-        assert h == "c57fb0eff3f1d653", f"got {h}"
+        assert h == "6da1c6c9b280bbd7", f"got {h}"
+
+    def test_matched_v2_real_cache_resolves(self):
+        """End-to-end cache-key invariant against a known on-disk artifact.
+
+        The Phase 2 step3e matched_v2 d̂ extraction at L14 produces a cached
+        activation file at `artifacts/cache/c101587891347bd3.pt`. Replicate
+        the cache-key construction here with the actual split (seed=1,
+        n_test=10) and confirm the hex matches. This is the strongest
+        single guarantee that existing cached results still resolve
+        post-refactor."""
+        import json
+        import random
+        from pathlib import Path
+        from experiments._runner import content_hash
+
+        data_path = Path(__file__).resolve().parent.parent / "data/code_contrastive_matched.jsonl"
+        recs = [json.loads(l) for l in data_path.open()]
+        harmful = [r["text"] for r in recs if r["label"] == "harmful"]
+        rng = random.Random(1)
+        rng.shuffle(harmful)
+        h_train = harmful[10:]  # step3e's 30-prompt train slice
+        extra = ("Qwen/Qwen2.5-3B-Instruct|dtype=torch.bfloat16|L14|"
+                 "resid_post|last_token|matched_v2|harmful_train")
+        key = content_hash(h_train, extra=extra)
+        assert key == "c101587891347bd3", (
+            f"got {key} — cache-key drifted from on-disk artifact "
+            "c101587891347bd3.pt. Existing Phase 2 step3e cached activations "
+            "will not resolve."
+        )
 
     def test_content_hash_byte_sensitive(self):
         """A one-char change in any input must change the hash."""
@@ -55,7 +86,7 @@ class TestCacheKeyInvariants:
         """The exact f-string template Phase 2 step3-family uses is frozen.
         If anything about how we render bundle.name or dtype changes, this
         catches it."""
-        bundle_name = "qwen-qwen2.5-3b-instruct"
+        bundle_name = "Qwen/Qwen2.5-3B-Instruct"  # verbatim HF path
         dtype_str = "torch.bfloat16"
         layer = 14
         tag = "matched_v2"
@@ -68,7 +99,7 @@ class TestCacheKeyInvariants:
         # `c101587891347bd3.pt` was computed from a string of this exact
         # shape; any drift here orphans every cached tensor.
         expected = (
-            "qwen-qwen2.5-3b-instruct|dtype=torch.bfloat16|L14|"
+            "Qwen/Qwen2.5-3B-Instruct|dtype=torch.bfloat16|L14|"
             "resid_post|last_token|matched_v2|harmful_train"
         )
         assert extra == expected
@@ -82,7 +113,7 @@ class TestExtractDHatComposition:
     def test_synthetic_composition(self):
         """Given fixed H, L tensors, the composition (diff_of_means → unit
         → natural_scale) must produce these exact numbers."""
-        from src.directions import diff_of_means, unit
+        from mech_security.directions import diff_of_means, unit
         torch.manual_seed(42)
         H = torch.tensor([
             [3.0, 1.0, 0.0],
@@ -104,10 +135,10 @@ class TestExtractDHatComposition:
         assert abs(natural_scale - 20.0 / sqrt40) < 1e-4
 
     def test_extract_d_hat_signature_invariant(self):
-        """src.directions.extract_d_hat must be importable AND have the
+        """mech_security.directions.extract_d_hat must be importable AND have the
         4-tuple return contract (d_hat, H, L, meta). Catches an accidental
         signature change during the rename/packaging move."""
-        from src.directions import extract_d_hat
+        from mech_security.directions import extract_d_hat
         sig_params = list(extract_d_hat.__code__.co_varnames[:extract_d_hat.__code__.co_argcount])
         # Must accept bundle, harmful, harmless as positional-or-keyword
         for p in ("bundle", "harmful", "harmless"):
@@ -127,7 +158,7 @@ class TestBypassGapArithmetic:
     def test_gap_arithmetic_pinned(self, monkeypatch):
         """Given baseline refusal 1.0 and ablated refusal 0.3, gap=0.7.
         Pin the arithmetic so a refactor can't silently invert sign."""
-        from src.directions import bypass_gap
+        from mech_security.directions import bypass_gap
 
         # Stub generate so we can control completions deterministically
         baselines = ["REFUSED"] * 10
@@ -138,14 +169,14 @@ class TestBypassGapArithmetic:
             calls["n"] += 1
             return ablations[(calls["n"] - 1) % 10] if calls["n"] > 10 else baselines[calls["n"] - 1]
 
-        import src.model
-        monkeypatch.setattr(src.model, "generate", fake_generate)
+        import mech_security.model
+        monkeypatch.setattr(mech_security.model, "generate", fake_generate)
 
         from contextlib import contextmanager
         @contextmanager
         def noop_ablate(*a, **k):
             yield
-        monkeypatch.setattr("src.directions.ablate_dir", noop_ablate, raising=False)
+        monkeypatch.setattr("mech_security.directions.ablate_dir", noop_ablate, raising=False)
 
         class _StubModel:
             class cfg:

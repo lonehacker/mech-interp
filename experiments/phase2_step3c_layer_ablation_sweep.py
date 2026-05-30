@@ -35,7 +35,6 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 from experiments._runner import (
@@ -48,9 +47,9 @@ from experiments._runner import (
     stratified_split,
     write_json,
 )
-from src.directions import ablate_dir
-from src.eval import is_refusal
-from src.model import format_prompt_for_bundle
+from mech_security.directions import ablate_dir
+from mech_security.eval import is_refusal
+from mech_security.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step3c")
 
@@ -146,7 +145,7 @@ def main() -> int:
     # === Dual judge ===
     judge_summary = {}
     if args.scorer in ("llm", "both"):
-        from src.eval_llm import judge_many
+        from mech_security.eval_llm import judge_many
         log.info("running Haiku 4.5 judge on %d × %d pairs...", len(cells), len(harmful_test))
         for name, gens in cells.items():
             pairs = list(zip(harmful_test, gens))

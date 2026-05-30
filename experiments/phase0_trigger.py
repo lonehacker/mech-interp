@@ -25,7 +25,6 @@ import sys
 from pathlib import Path
 
 # Allow `python -m experiments.phase0_trigger` to import src/* from repo root.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
 
@@ -44,10 +43,10 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import diff_of_means, project, random_unit_vector, unit
-from src.eval import is_refusal, refusal_rate
-from src.model import format_prompt, generate, tokenize_prompt
+from mech_security.activations import cache_resid
+from mech_security.directions import diff_of_means, project, random_unit_vector, unit
+from mech_security.eval import is_refusal, refusal_rate
+from mech_security.model import format_prompt, generate, tokenize_prompt
 
 log = get_logger("phase0")
 

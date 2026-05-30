@@ -36,7 +36,6 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
 
@@ -56,9 +55,9 @@ from experiments._runner import (
     train_test_split,
     write_json,
 )
-from src.directions import add_dir, random_unit_vector
-from src.eval import is_refusal
-from src.model import format_prompt_for_bundle
+from mech_security.directions import add_dir, random_unit_vector
+from mech_security.eval import is_refusal
+from mech_security.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step3d")
 
@@ -195,7 +194,7 @@ def main() -> int:
              args.judge_lift_threshold, len(cells_to_judge))
     judge_summary = {}
     if cells_to_judge:
-        from src.eval_llm import judge_many
+        from mech_security.eval_llm import judge_many
         log.info("running Haiku 4.5 judge on baseline + %d lifted cells...", len(cells_to_judge))
         pairs = list(zip(harmless_subset, base_gen))
         verdicts = judge_many(pairs, show_progress=False)

@@ -52,16 +52,15 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import torch
 
 from experiments._runner import RESULTS, get_logger, get_model
-from src.activations import cache_resid
-from src.directions import diff_of_means, project, unit
-from src.eval import is_refusal
-from src.model import format_prompt, generate, tokenize_prompt
+from mech_security.activations import cache_resid
+from mech_security.directions import diff_of_means, project, unit
+from mech_security.eval import is_refusal
+from mech_security.model import format_prompt, generate, tokenize_prompt
 
 log = get_logger("repro")
 

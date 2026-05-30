@@ -90,7 +90,6 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import torch
@@ -106,10 +105,10 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import ablate_dir, diff_of_means, unit
-from src.eval import refusal_rate
-from src.model import format_prompt, generate, tokenize_prompt
+from mech_security.activations import cache_resid
+from mech_security.directions import ablate_dir, diff_of_means, unit
+from mech_security.eval import refusal_rate
+from mech_security.model import format_prompt, generate, tokenize_prompt
 
 log = get_logger("phase1_rdo")
 

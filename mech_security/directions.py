@@ -246,7 +246,7 @@ def extract_d_hat(
     sweep, see HOW_IT_WORKS.md §"How the code does the per-cell sweep" or
     `experiments/phase2_part2_dim_bypass_gap_sweep.py`.
     """
-    from src.activations import cache_resid
+    from mech_security.activations import cache_resid
     H = cache_resid(bundle, harmful, layer=layer, position=position,
                     format_fn=format_fn, show_progress=False)
     L = cache_resid(bundle, harmless, layer=layer, position=position,
@@ -292,8 +292,8 @@ def bypass_gap(
          "baseline_completions": list[str], "ablated_completions": list[str],
          "mean_chars_baseline": float, "mean_chars_ablated": float}
     """
-    from src.eval import is_refusal
-    from src.model import generate
+    from mech_security.eval import is_refusal
+    from mech_security.model import generate
 
     if scorer is None:
         scorer = lambda gens: sum(is_refusal(g) for g in gens) / len(gens)  # noqa: E731

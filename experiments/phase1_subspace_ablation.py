@@ -61,7 +61,6 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import torch
@@ -76,8 +75,8 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import (
+from mech_security.activations import cache_resid
+from mech_security.directions import (
     ablate_dir,
     ablate_subspace,
     diff_of_means,
@@ -85,8 +84,8 @@ from src.directions import (
     random_unit_vector,
     unit,
 )
-from src.eval import coherence_ok, refusal_rate
-from src.model import generate
+from mech_security.eval import coherence_ok, refusal_rate
+from mech_security.model import generate
 
 log = get_logger("phase1_subspace_ablation")
 

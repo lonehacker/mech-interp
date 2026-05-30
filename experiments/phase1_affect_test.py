@@ -40,7 +40,6 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
 
@@ -54,10 +53,10 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import diff_of_means, project, unit
-from src.eval import is_refusal
-from src.model import generate
+from mech_security.activations import cache_resid
+from mech_security.directions import diff_of_means, project, unit
+from mech_security.eval import is_refusal
+from mech_security.model import generate
 
 log = get_logger("affect_test")
 
@@ -157,7 +156,7 @@ def main() -> int:
     # Optional LLM-as-judge classification
     if args.scorer in ("llm", "both"):
         log.info("running LLM-as-judge classification on %d pairs...", len(enriched))
-        from src.eval_llm import judge_many
+        from mech_security.eval_llm import judge_many
         pairs = [(r["text"], r["completion"]) for r in enriched]
         verdicts = judge_many(pairs, show_progress=False)
         for r, v in zip(enriched, verdicts):

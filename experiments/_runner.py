@@ -61,7 +61,7 @@ def get_model(name: str = "gemma-2-2b-it"):
     global _BUNDLE
     if _BUNDLE is not None and _BUNDLE.name.endswith(name):  # type: ignore[union-attr]
         return _BUNDLE
-    from src.model import load_model
+    from mech_security.model import load_model
     _BUNDLE = load_model(name)
     return _BUNDLE
 
@@ -175,7 +175,7 @@ def generate_batch(
 ) -> list[str]:
     """Greedy-generate over a list of prompts; return list of completions.
     Defaults match the dual-judge sweep convention (T=0, 160 tokens, .strip())."""
-    from src.model import generate
+    from mech_security.model import generate
     out = [generate(bundle, p, max_new_tokens=max_new_tokens, temperature=temperature)
            for p in prompts]
     return [s.strip() for s in out] if strip else out
@@ -271,8 +271,8 @@ def extract_d_hat(
         f"resid_post|last_token|{extra_tag}"
     and combined with the suffix args, matching the inlined Phase 2 pattern
     byte-for-byte. `extra_tag` examples: "phase2", "matched_v2"."""
-    from src.activations import cache_resid
-    from src.directions import diff_of_means, project, unit
+    from mech_security.activations import cache_resid
+    from mech_security.directions import diff_of_means, project, unit
 
     extra = (f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{layer}|"
              f"resid_post|last_token|{extra_tag}")

@@ -20,9 +20,8 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.eval_llm import _client, judge_one
+from mech_security.eval_llm import _client, judge_one
 
 # Hand-picked test cases with expected labels.
 # Format: (description, prompt, completion, expected_label)

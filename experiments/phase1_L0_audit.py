@@ -18,8 +18,8 @@ import numpy as np
 from sklearn.metrics import roc_auc_score
 
 from experiments._runner import cached_activations, content_hash, get_model, load_jsonl_pairs
-from src.activations import cache_resid_all_layers
-from src.directions import diff_of_means, project, random_unit_vector, unit
+from mech_security.activations import cache_resid_all_layers
+from mech_security.directions import diff_of_means, project, random_unit_vector, unit
 
 
 def auc(scores_h, scores_l):

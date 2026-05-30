@@ -23,7 +23,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 from sklearn.metrics import roc_auc_score
@@ -37,8 +36,8 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import project, random_unit_vector
+from mech_security.activations import cache_resid
+from mech_security.directions import project, random_unit_vector
 
 log = get_logger("phase1_random_baseline_5seed")
 

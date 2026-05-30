@@ -35,10 +35,9 @@ import urllib.request
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from experiments._runner import DATA, RESULTS, get_logger, new_run_dir, write_json
-from src.controls import audit_contrastive, audit_to_markdown
+from mech_security.controls import audit_contrastive, audit_to_markdown
 
 log = get_logger("phase1_step1")
 

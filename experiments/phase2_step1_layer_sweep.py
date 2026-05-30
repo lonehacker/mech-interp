@@ -29,7 +29,6 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib
 
@@ -50,10 +49,10 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid_all_layers
-from src.causal_metric import get_or_discover_token_sets
-from src.directions import diff_of_means, project, random_unit_vector, unit
-from src.model import format_prompt_for_bundle
+from mech_security.activations import cache_resid_all_layers
+from mech_security.causal_metric import get_or_discover_token_sets
+from mech_security.directions import diff_of_means, project, random_unit_vector, unit
+from mech_security.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step1")
 

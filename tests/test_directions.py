@@ -1,4 +1,4 @@
-"""Unit tests for src.directions math.
+"""Unit tests for mech_security.directions math.
 
 Pure synthetic data with closed-form expected answers. If these fail, the
 diff-of-means / projection / normalization arithmetic is broken and every
@@ -11,12 +11,11 @@ Run:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 import torch
 
-from src.directions import (
+from mech_security.directions import (
     bypass_gap,
     diff_of_means,
     lda_directions,
@@ -221,20 +220,20 @@ class TestBypassGap:
         def fake_generate(bundle, prompt, max_new_tokens=160, temperature=0.0):
             calls["n"] += 1
             return baselines[calls["n"] - 1] if calls["n"] <= 4 else ablations[calls["n"] - 5]
-        monkeypatch.setattr("src.directions.generate", fake_generate, raising=False)
+        monkeypatch.setattr("mech_security.directions.generate", fake_generate, raising=False)
         # Also patch ablate_dir to be a no-op (we don't have a real model)
         from contextlib import contextmanager
         @contextmanager
         def noop_ablate(*a, **k):
             yield
-        monkeypatch.setattr("src.directions.ablate_dir", noop_ablate, raising=False)
+        monkeypatch.setattr("mech_security.directions.ablate_dir", noop_ablate, raising=False)
 
-        # NOTE: with monkeypatch on src.directions.generate, calling from inside
+        # NOTE: with monkeypatch on mech_security.directions.generate, calling from inside
         # bypass_gap (which imports generate lazily inside the function) won't
-        # pick up the patch. The function does `from src.model import generate`
+        # pick up the patch. The function does `from mech_security.model import generate`
         # locally — we patch that instead.
-        import src.model
-        monkeypatch.setattr(src.model, "generate", fake_generate)
+        import mech_security.model
+        monkeypatch.setattr(mech_security.model, "generate", fake_generate)
 
         bundle = self._StubBundle()
         d = torch.zeros(8)
@@ -257,13 +256,13 @@ class TestBypassGap:
         def fake_generate(bundle, prompt, max_new_tokens=160, temperature=0.0):
             calls["n"] += 1
             return "compliant"
-        import src.model
-        monkeypatch.setattr(src.model, "generate", fake_generate)
+        import mech_security.model
+        monkeypatch.setattr(mech_security.model, "generate", fake_generate)
         from contextlib import contextmanager
         @contextmanager
         def noop_ablate(*a, **k):
             yield
-        monkeypatch.setattr("src.directions.ablate_dir", noop_ablate, raising=False)
+        monkeypatch.setattr("mech_security.directions.ablate_dir", noop_ablate, raising=False)
 
         bundle = self._StubBundle()
         d = torch.zeros(8)

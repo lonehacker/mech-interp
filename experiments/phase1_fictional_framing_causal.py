@@ -29,7 +29,6 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
 
@@ -43,10 +42,10 @@ from experiments._runner import (
     new_run_dir,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import ablate_dir, diff_of_means, project, unit
-from src.eval import is_refusal
-from src.model import generate
+from mech_security.activations import cache_resid
+from mech_security.directions import ablate_dir, diff_of_means, project, unit
+from mech_security.eval import is_refusal
+from mech_security.model import generate
 
 log = get_logger("phase1_fictional_causal")
 
@@ -189,7 +188,7 @@ def main() -> int:
     judge_results = {}
     if args.scorer in ("llm", "both"):
         log.info("running calibrated LLM judge on 3 × 15 = 45 (prompt, completion) pairs ...")
-        from src.eval_llm import judge_many
+        from mech_security.eval_llm import judge_many
         for name, gens in cells:
             pairs = list(zip(test_prompts, gens))
             verdicts = judge_many(pairs, show_progress=False)

@@ -1,0 +1,13 @@
+torch
+transformers
+transformer-lens
+scikit-learn
+numpy
+tqdm
+anthropic
+python-dotenv
+jaxtyping
+
+[dev]
+pytest
+ruff

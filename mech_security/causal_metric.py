@@ -20,7 +20,7 @@ from pathlib import Path
 
 import torch
 
-from src.model import ModelBundle, format_prompt_for_bundle, tokenize_prompt
+from mech_security.model import ModelBundle, format_prompt_for_bundle, tokenize_prompt
 
 # ============================================================================
 # Token-set discovery: which tokens count as "refusal openers" vs "compliance"?
@@ -373,7 +373,7 @@ def compute_causal_effect(
             compliance_per_prompt=baseline["compliance_per_prompt"],
         )
 
-    from src.directions import ablate_dir
+    from mech_security.directions import ablate_dir
     abl = causal_effect_under_hook(
         bundle, prompts, refusal_token_ids, compliance_token_ids,
         hook_ctx=ablate_dir(bundle.model, direction), return_per_prompt=True,
