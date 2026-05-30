@@ -35,30 +35,30 @@ import numpy as np
 
 from experiments._runner import (
     RESULTS,
-    cached_activations,
-    content_hash,
+    extract_d_hat,
+    generate_batch,
     get_logger,
     get_model,
     new_run_dir,
+    stratified_split,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import ablate_dir, add_dir, diff_of_means, project, random_unit_vector, unit
+from src.directions import ablate_dir, add_dir, random_unit_vector
 from src.eval import is_refusal
-from src.model import format_prompt_for_bundle, generate
+from src.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step3e")
-
-
-def _gen_batch(bundle, prompts, max_new=160):
-    return [generate(bundle, p, max_new_tokens=max_new, temperature=0.0).strip()
-            for p in prompts]
 
 
 def _split(jsonl_path, seed=1, n_test=10):
     """Simple 30/10 split on each side. The matched set has uniform sources
     (all harmful = harmbench_cybercrime, all harmless = defensive_matched_v2),
-    so no stratification needed."""
+    so no stratification needed.
+
+    The harmful + harmless shuffles share a single rng instance; this
+    state-sharing is part of the cache key, so the inlined sequence is kept
+    here rather than delegated to the generic _runner helper (which makes a
+    fresh rng per call)."""
     recs = [json.loads(l) for l in jsonl_path.open()]
     harmful = [r["text"] for r in recs if r["label"] == "harmful"]
     harmless = [r["text"] for r in recs if r["label"] == "harmless"]
@@ -107,42 +107,29 @@ def main() -> int:
     fmt = lambda msg: format_prompt_for_bundle(bundle, msg)
 
     # === Extract d̂_matched at L14 ===
-    extra_m = (f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{args.extract_layer}|"
-               f"resid_post|last_token|matched_v2")
-    key_h = content_hash(h_train_m, extra=extra_m + "|harmful_train")
-    key_l = content_hash(l_train_m, extra=extra_m + "|harmless_train")
     log.info("caching d̂_matched activations at L%d...", args.extract_layer)
-    H_m = cached_activations(key_h,
-        lambda: cache_resid(bundle, h_train_m, layer=args.extract_layer, show_progress=False, format_fn=fmt))
-    L_m = cached_activations(key_l,
-        lambda: cache_resid(bundle, l_train_m, layer=args.extract_layer, show_progress=False, format_fn=fmt))
-    d_hat_matched = unit(diff_of_means(H_m, L_m))
-    nat_scale_matched = float(project(H_m, d_hat_matched).mean())
+    d_hat_matched, _H_m, _L_m, meta_m = extract_d_hat(
+        bundle, h_train_m, l_train_m,
+        layer=args.extract_layer, format_fn=fmt,
+        extra_tag="matched_v2", harmless_key_suffix="harmless_train",
+    )
+    nat_scale_matched = meta_m["natural_scale"]
     log.info("d̂_matched: natural scale at L%d = %.3f", args.extract_layer, nat_scale_matched)
 
     # === Reconstruct d̂_old from code_contrastive (already-cached) for direct comparison ===
     recs_code = [json.loads(l) for l in code_path.open()]
     harm_code = [r for r in recs_code if r["label"] == "harmful"]
     harmless_code = [r["text"] for r in recs_code if r["label"] == "harmless"]
-    hb = [r for r in harm_code if r["source"] == "harmbench_cybercrime"]
-    adv = [r for r in harm_code if r["source"] == "advbench_code"]
-    frac_hb = len(hb) / len(harm_code)
-    n_test_hb_code = round(30 * frac_hb)
-    n_test_adv_code = 30 - n_test_hb_code
-    rng2 = random.Random(args.split_seed)
-    rng2.shuffle(hb); rng2.shuffle(adv)
-    h_train_code = [r["text"] for r in hb[n_test_hb_code:] + adv[n_test_adv_code:]]
-    extra_c = (f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{args.extract_layer}|"
-               f"resid_post|last_token|phase2")
-    k_hc = content_hash(h_train_code, extra=extra_c + "|harmful_train")
-    k_lc = content_hash(harmless_code, extra=extra_c + "|harmless")
-    H_c = cached_activations(k_hc,
-        lambda: cache_resid(bundle, h_train_code, layer=args.extract_layer, show_progress=False, format_fn=fmt))
-    L_c = cached_activations(k_lc,
-        lambda: cache_resid(bundle, harmless_code, layer=args.extract_layer, show_progress=False, format_fn=fmt))
-    d_hat_old = unit(diff_of_means(H_c, L_c))
+    train_code_recs, _ = stratified_split(
+        harm_code, key_fn=lambda r: r["source"], seed=args.split_seed, n_test=30,
+    )
+    h_train_code = [r["text"] for r in train_code_recs]
+    d_hat_old, _H_c, _L_c, meta_o = extract_d_hat(
+        bundle, h_train_code, harmless_code,
+        layer=args.extract_layer, format_fn=fmt, extra_tag="phase2",
+    )
     log.info("d̂_old (code_contrastive): natural scale at L%d = %.3f",
-             args.extract_layer, float(project(H_c, d_hat_old).mean()))
+             args.extract_layer, meta_o["natural_scale"])
 
     cos_old_new = float((d_hat_matched * d_hat_old).sum())
     log.info("cos(d̂_matched, d̂_old) = %.4f", cos_old_new)
@@ -156,16 +143,16 @@ def main() -> int:
     # =====================================================
     log.info("=== PART 1: ablation cells on 10 held-out matched-harmful ===")
     log.info("generating baseline (no hook)...")
-    abl_base = _gen_batch(bundle, h_test_m, max_new=args.max_new_tokens)
+    abl_base = generate_batch(bundle, h_test_m, max_new_tokens=args.max_new_tokens)
     log.info("generating with ablate(d̂_matched)...")
     with ablate_dir(bundle.model, d_m_dev):
-        abl_dnew = _gen_batch(bundle, h_test_m, max_new=args.max_new_tokens)
+        abl_dnew = generate_batch(bundle, h_test_m, max_new_tokens=args.max_new_tokens)
     log.info("generating with ablate(d̂_old)...")
     with ablate_dir(bundle.model, d_o_dev):
-        abl_dold = _gen_batch(bundle, h_test_m, max_new=args.max_new_tokens)
+        abl_dold = generate_batch(bundle, h_test_m, max_new_tokens=args.max_new_tokens)
     log.info("generating with ablate(random)...")
     with ablate_dir(bundle.model, rand_dir):
-        abl_rand = _gen_batch(bundle, h_test_m, max_new=args.max_new_tokens)
+        abl_rand = generate_batch(bundle, h_test_m, max_new_tokens=args.max_new_tokens)
 
     abl_cells = {
         "baseline": abl_base,
@@ -182,7 +169,7 @@ def main() -> int:
     # =====================================================
     log.info("=== PART 2: addition sweep on %d harmless test prompts ===", len(l_test_m))
     log.info("generating addition-baseline (no hook)...")
-    add_base = _gen_batch(bundle, l_test_m, max_new=args.max_new_tokens)
+    add_base = generate_batch(bundle, l_test_m, max_new_tokens=args.max_new_tokens)
     add_base_rate = sum(is_refusal(g) for g in add_base) / len(add_base)
     log.info("  addition baseline substring refusal: %.3f", add_base_rate)
 
@@ -197,7 +184,7 @@ def main() -> int:
             name = f"add_L{L_inj}_c{cmult}x"
             log.info("  [%d/%d] %s: inject L%d coeff=%.3f", cell_idx, total_cells, name, L_inj, coeff)
             with add_dir(bundle.model, d_m_dev, coeff=coeff, layer=L_inj):
-                gen = _gen_batch(bundle, l_test_m, max_new=args.max_new_tokens)
+                gen = generate_batch(bundle, l_test_m, max_new_tokens=args.max_new_tokens)
             n_ref = sum(is_refusal(g) for g in gen)
             mean_len = float(np.mean([len(g) for g in gen]))
             add_cells[name] = gen
@@ -291,7 +278,7 @@ def main() -> int:
             log.info("specificity control: random unit vector at %s", best)
             with add_dir(bundle.model, rand_dir, coeff=add_meta[best]["coeff"],
                           layer=add_meta[best]["inject_layer"]):
-                rand_gen = _gen_batch(bundle, l_test_m, max_new=args.max_new_tokens)
+                rand_gen = generate_batch(bundle, l_test_m, max_new_tokens=args.max_new_tokens)
             n_ref = sum(is_refusal(g) for g in rand_gen)
             spec_control = {
                 "cell": best, "completions": rand_gen,

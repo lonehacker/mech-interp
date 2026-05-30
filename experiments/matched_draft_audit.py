@@ -1,4 +1,7 @@
-"""STEP B — audit the matched draft before promoting.
+"""SUPERSEDED — v1+v2 audit script. Replaced by `matched_dual_audit.py`
+(CV-primary). Kept for the audit trail.
+
+STEP B — audit the matched draft before promoting.
 
 Two checks per planner:
   1. Decompose the residual TF-IDF 0.67: are the top discriminative

@@ -1,4 +1,8 @@
 """
+SUPERSEDED — Phase 0 affect-test set evaluation. Replaced first by
+`phase1_step3c_expanded_contrastive.py` and then by
+`phase1_fictional_framing_*` (Phase 1.5-B). Kept for the audit trail.
+
 Phase 1 — affect-decoupled transfer test.
 
 Question: is `d_hat` (the diff-of-means direction extracted from the main

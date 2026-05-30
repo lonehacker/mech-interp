@@ -1,4 +1,8 @@
 """
+SUPERSEDED — kept for the audit trail. Do not run as part of the headline pipeline.
+Replaced by `phase1_fictional_framing_balanced.py` and
+`phase1_fictional_framing_causal.py` (Phase 1.5-B).
+
 Phase 1 — Step 3c: the cheap negative control for the "second mechanism" claim.
 
 Earlier affect test found that some fictional-framing jailbreak prompts

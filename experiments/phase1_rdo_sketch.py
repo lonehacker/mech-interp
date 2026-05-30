@@ -1,4 +1,7 @@
 """
+SUPERSEDED — parked, never run. Kept for posterity as a scope-escalation example
+(homegrown RDO sketch written from prose, not the canonical Wollschläger repo).
+
 ⚠️  HOMEGROWN SKETCH — NOT WOLLSCHLÄGER'S RDO. DO NOT TREAT RESULTS FROM THIS
    SCRIPT AS AN RDO TEST OR A REPLICATION OF Wollschläger et al. ICML 2025.
 

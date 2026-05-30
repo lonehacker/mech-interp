@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
 import sys
 from pathlib import Path
 
@@ -41,42 +40,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from experiments._runner import (
     RESULTS,
-    cached_activations,
-    content_hash,
+    extract_d_hat,
+    generate_batch,
     get_logger,
     get_model,
     new_run_dir,
+    stratified_split,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import ablate_dir, diff_of_means, unit
+from src.directions import ablate_dir
 from src.eval import is_refusal
-from src.model import format_prompt_for_bundle, generate
+from src.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step3c")
 
 
-def _generate_batch(bundle, prompts, max_new=160):
-    return [generate(bundle, p, max_new_tokens=max_new, temperature=0.0).strip()
-            for p in prompts]
-
-
-def _stratified_split(jsonl_path: Path, seed: int = 1, n_test: int = 30):
+def _load_split(jsonl_path: Path, seed: int = 1, n_test: int = 30):
     """Same split logic as phase2_step3_causal.py — guarantees the d̂ from
     layer L is the same direction Step 3 used at L14 (modulo extraction layer)."""
     recs = [json.loads(l) for l in jsonl_path.open()]
     harm_recs = [r for r in recs if r["label"] == "harmful"]
     harmless = [r["text"] for r in recs if r["label"] == "harmless"]
-    hb = [r for r in harm_recs if r["source"] == "harmbench_cybercrime"]
-    adv = [r for r in harm_recs if r["source"] == "advbench_code"]
-    frac_hb = len(hb) / len(harm_recs)
-    n_test_hb = round(n_test * frac_hb)
-    n_test_adv = n_test - n_test_hb
-    rng = random.Random(seed)
-    rng.shuffle(hb)
-    rng.shuffle(adv)
-    test = hb[:n_test_hb] + adv[:n_test_adv]
-    train = hb[n_test_hb:] + adv[n_test_adv:]
+    train, test = stratified_split(
+        harm_recs, key_fn=lambda r: r["source"], seed=seed, n_test=n_test,
+    )
     return ([r["text"] for r in train], [r["text"] for r in test],
             harmless, test)
 
@@ -103,7 +90,7 @@ def main() -> int:
     pairs_path = Path(args.data)
     if not pairs_path.is_absolute():
         pairs_path = Path(__file__).resolve().parent.parent / pairs_path
-    harmful_train, harmful_test, harmless, _ = _stratified_split(
+    harmful_train, harmful_test, harmless, _ = _load_split(
         pairs_path, seed=args.split_seed, n_test=args.n_test,
     )
     log.info("split (seed=%d): train=%d, test=%d, harmless=%d",
@@ -113,7 +100,7 @@ def main() -> int:
 
     # === Baseline (no hook) — only once; reused across all layer cells ===
     log.info("generating baseline (no hook) on %d test prompts...", len(harmful_test))
-    base_gen = _generate_batch(bundle, harmful_test, max_new=args.max_new_tokens)
+    base_gen = generate_batch(bundle, harmful_test, max_new_tokens=args.max_new_tokens)
     baseline_substr_rate = sum(is_refusal(g) for g in base_gen) / len(base_gen)
     log.info("  baseline substring refusal: %.3f", baseline_substr_rate)
 
@@ -123,30 +110,17 @@ def main() -> int:
     # === Sweep over extraction layers ===
     for L in args.layers:
         log.info("=== extraction layer L%d ===", L)
-        extra = (
-            f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{L}|"
-            f"resid_post|last_token|phase2"
-        )
-        key_ht = content_hash(harmful_train, extra=extra + "|harmful_train")
-        key_l = content_hash(harmless, extra=extra + "|harmless")
         log.info("  caching residuals (train+harmless) at L%d ...", L)
-        H_train = cached_activations(
-            key_ht,
-            lambda L=L: cache_resid(bundle, harmful_train, layer=L,
-                                    show_progress=False, format_fn=fmt),
+        d_hat, _H, _L, _meta = extract_d_hat(
+            bundle, harmful_train, harmless,
+            layer=L, format_fn=fmt, extra_tag="phase2",
         )
-        L_full = cached_activations(
-            key_l,
-            lambda L=L: cache_resid(bundle, harmless, layer=L,
-                                    show_progress=False, format_fn=fmt),
-        )
-        d_hat = unit(diff_of_means(H_train, L_full))
         log.info("  d_hat extracted from L%d | shape=%s", L, tuple(d_hat.shape))
 
         d_dev = d_hat.to(bundle.device).to(bundle.model.cfg.dtype)
         log.info("  generating with ablate(d̂_L%d) at all layers...", L)
         with ablate_dir(bundle.model, d_dev):
-            abl_gen = _generate_batch(bundle, harmful_test, max_new=args.max_new_tokens)
+            abl_gen = generate_batch(bundle, harmful_test, max_new_tokens=args.max_new_tokens)
 
         cell_name = f"ablate_dhat_L{L}"
         cells[cell_name] = abl_gen

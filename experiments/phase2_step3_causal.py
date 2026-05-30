@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
 import sys
 from pathlib import Path
 
@@ -41,27 +40,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from experiments._runner import (
     RESULTS,
-    cached_activations,
-    content_hash,
+    extract_d_hat,
+    generate_batch,
     get_logger,
     get_model,
     new_run_dir,
+    stratified_split,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import ablate_dir, diff_of_means, random_unit_vector, unit
+from src.directions import ablate_dir, random_unit_vector
 from src.eval import is_refusal
-from src.model import format_prompt_for_bundle, generate
+from src.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step3")
 
 
-def _generate_batch(bundle, prompts, max_new=160):
-    return [generate(bundle, p, max_new_tokens=max_new, temperature=0.0).strip()
-            for p in prompts]
-
-
-def _stratified_split(jsonl_path: Path, seed: int = 1, n_test: int = 30):
+def _load_split(jsonl_path: Path, seed: int = 1, n_test: int = 30):
     """Split code_contrastive.jsonl harmful side into train/test, preserving
     HarmBench cybercrime vs AdvBench-code ratios.
     Returns (harmful_train, harmful_test, harmless, harmful_test_meta).
@@ -69,25 +63,15 @@ def _stratified_split(jsonl_path: Path, seed: int = 1, n_test: int = 30):
     recs = [json.loads(l) for l in jsonl_path.open()]
     harm_recs = [r for r in recs if r["label"] == "harmful"]
     harmless = [r["text"] for r in recs if r["label"] == "harmless"]
-
-    hb = [r for r in harm_recs if r["source"] == "harmbench_cybercrime"]
-    adv = [r for r in harm_recs if r["source"] == "advbench_code"]
+    hb_n = sum(1 for r in harm_recs if r["source"] == "harmbench_cybercrime")
+    adv_n = sum(1 for r in harm_recs if r["source"] == "advbench_code")
     log.info("harmful pool: %d HarmBench cybercrime + %d AdvBench-code = %d",
-             len(hb), len(adv), len(harm_recs))
+             hb_n, adv_n, len(harm_recs))
 
-    # Stratified n_test: same ratio as full set
-    frac_hb = len(hb) / len(harm_recs)
-    n_test_hb = round(n_test * frac_hb)
-    n_test_adv = n_test - n_test_hb
-    rng = random.Random(seed)
-    rng.shuffle(hb)
-    rng.shuffle(adv)
-    test = hb[:n_test_hb] + adv[:n_test_adv]
-    train = hb[n_test_hb:] + adv[n_test_adv:]
-    log.info("split (seed=%d): train=%d (%d HB + %d ADV), test=%d (%d HB + %d ADV)",
-             seed, len(train), len(hb[n_test_hb:]), len(adv[n_test_adv:]),
-             len(test), n_test_hb, n_test_adv)
-
+    train, test = stratified_split(
+        harm_recs, key_fn=lambda r: r["source"], seed=seed, n_test=n_test,
+    )
+    log.info("split (seed=%d): train=%d, test=%d", seed, len(train), len(test))
     return ([r["text"] for r in train], [r["text"] for r in test],
             harmless, test)
 
@@ -114,30 +98,17 @@ def main() -> int:
     pairs_path = Path(args.data)
     if not pairs_path.is_absolute():
         pairs_path = Path(__file__).resolve().parent.parent / pairs_path
-    harmful_train, harmful_test, harmless, test_meta = _stratified_split(
+    harmful_train, harmful_test, harmless, test_meta = _load_split(
         pairs_path, seed=args.split_seed, n_test=args.n_test,
     )
 
     # === Extract d̂_train at L14 from cached activations (re-derived; cache hit expected) ===
     fmt = lambda msg: format_prompt_for_bundle(bundle, msg)
-    extra = (
-        f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{args.peak_layer}|resid_post|last_token|phase2"
-    )
-    key_ht = content_hash(harmful_train, extra=extra + "|harmful_train")
-    key_l = content_hash(harmless, extra=extra + "|harmless")
     log.info("caching residuals (train+harmless) at L%d ...", args.peak_layer)
-    H_train = cached_activations(
-        key_ht,
-        lambda: cache_resid(bundle, harmful_train, layer=args.peak_layer,
-                            show_progress=False, format_fn=fmt),
+    d_hat, H_train, L_full, _meta = extract_d_hat(
+        bundle, harmful_train, harmless,
+        layer=args.peak_layer, format_fn=fmt, extra_tag="phase2",
     )
-    L_full = cached_activations(
-        key_l,
-        lambda: cache_resid(bundle, harmless, layer=args.peak_layer,
-                            show_progress=False, format_fn=fmt),
-    )
-
-    d_hat = unit(diff_of_means(H_train, L_full))
     log.info("d_hat extracted at L%d from %d harmful_train + %d harmless",
              args.peak_layer, H_train.shape[0], L_full.shape[0])
 
@@ -148,15 +119,15 @@ def main() -> int:
 
     # === Three conditions × n_test prompts ===
     log.info("generating baseline (no hook) on %d test prompts...", len(harmful_test))
-    base_gen = _generate_batch(bundle, harmful_test, max_new=args.max_new_tokens)
+    base_gen = generate_batch(bundle, harmful_test, max_new_tokens=args.max_new_tokens)
 
     log.info("generating with ablate(d̂_train) at all layers...")
     with ablate_dir(bundle.model, d_dev):
-        abl_real = _generate_batch(bundle, harmful_test, max_new=args.max_new_tokens)
+        abl_real = generate_batch(bundle, harmful_test, max_new_tokens=args.max_new_tokens)
 
     log.info("generating with ablate(random) at all layers...")
     with ablate_dir(bundle.model, rand_dir):
-        abl_rand = _generate_batch(bundle, harmful_test, max_new=args.max_new_tokens)
+        abl_rand = generate_batch(bundle, harmful_test, max_new_tokens=args.max_new_tokens)
 
     # === Substring scorer (Qwen-tested in smoke; uses "is illegal"/"is unethical" patterns) ===
     cells = [

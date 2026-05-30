@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
 import sys
 from pathlib import Path
 
@@ -42,33 +41,27 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from experiments._runner import (
     RESULTS,
-    cached_activations,
-    content_hash,
+    extract_d_hat,
+    generate_batch,
     get_logger,
     get_model,
     new_run_dir,
+    stratified_split,
+    train_test_split,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import add_dir, diff_of_means, project, random_unit_vector, unit
+from src.directions import add_dir, random_unit_vector
 from src.eval import is_refusal
-from src.model import format_prompt_for_bundle, generate
+from src.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step3b")
 
 
-def _generate_batch(bundle, prompts, max_new=160):
-    return [generate(bundle, p, max_new_tokens=max_new, temperature=0.0).strip()
-            for p in prompts]
-
-
-def _stratified_harmless_split(jsonl_path: Path, seed: int = 1, n_test: int = 30):
-    """Pull the 150 harmless side; split 120 train (unused here) / 30 test."""
+def _harmless_test_split(jsonl_path: Path, seed: int = 1, n_test: int = 30):
+    """Pull the 150 harmless side; split into (unused train) / n_test."""
     recs = [json.loads(l) for l in jsonl_path.open()]
     harmless_recs = [r for r in recs if r["label"] == "harmless"]
-    rng = random.Random(seed)
-    rng.shuffle(harmless_recs)
-    test = harmless_recs[:n_test]
+    _, test = train_test_split(harmless_recs, seed=seed, n_test=n_test)
     return [r["text"] for r in test], test
 
 
@@ -101,41 +94,24 @@ def main() -> int:
     recs = [json.loads(l) for l in pairs_path.open()]
     harm_recs = [r for r in recs if r["label"] == "harmful"]
     harmless = [r["text"] for r in recs if r["label"] == "harmless"]
-    hb = [r for r in harm_recs if r["source"] == "harmbench_cybercrime"]
-    adv = [r for r in harm_recs if r["source"] == "advbench_code"]
-    frac_hb = len(hb) / len(harm_recs)
-    n_test_hb = round(args.n_test * frac_hb)
-    n_test_adv = args.n_test - n_test_hb
-    rng = random.Random(args.split_seed)
-    rng.shuffle(hb)
-    rng.shuffle(adv)
-    harmful_train = [r["text"] for r in hb[n_test_hb:] + adv[n_test_adv:]]
+    train_recs, _ = stratified_split(
+        harm_recs, key_fn=lambda r: r["source"], seed=args.split_seed, n_test=args.n_test,
+    )
+    harmful_train = [r["text"] for r in train_recs]
     log.info("harmful train (mirrors step 3): %d", len(harmful_train))
 
     # === Held-out harmless test set (the prompts d̂-addition needs to flip) ===
-    harmless_test, harmless_test_meta = _stratified_harmless_split(pairs_path, seed=args.split_seed, n_test=args.n_test)
+    harmless_test, harmless_test_meta = _harmless_test_split(pairs_path, seed=args.split_seed, n_test=args.n_test)
     log.info("harmless test: %d (seed=%d)", len(harmless_test), args.split_seed)
 
     # === Reconstruct d̂_train at extraction layer + natural scale ===
     fmt = lambda msg: format_prompt_for_bundle(bundle, msg)
-    extra = (
-        f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{args.peak_layer}|resid_post|last_token|phase2"
-    )
-    key_ht = content_hash(harmful_train, extra=extra + "|harmful_train")
-    key_l = content_hash(harmless, extra=extra + "|harmless")
     log.info("loading cached activations at L%d ...", args.peak_layer)
-    H_train = cached_activations(
-        key_ht,
-        lambda: cache_resid(bundle, harmful_train, layer=args.peak_layer,
-                            show_progress=False, format_fn=fmt),
+    d_hat, _H, _L, meta = extract_d_hat(
+        bundle, harmful_train, harmless,
+        layer=args.peak_layer, format_fn=fmt, extra_tag="phase2",
     )
-    L_full = cached_activations(
-        key_l,
-        lambda: cache_resid(bundle, harmless, layer=args.peak_layer,
-                            show_progress=False, format_fn=fmt),
-    )
-    d_hat = unit(diff_of_means(H_train, L_full))
-    natural_scale = float(project(H_train, d_hat).mean())
+    natural_scale = meta["natural_scale"]
     coeff = args.coeff_mult * natural_scale
     log.info("d_hat: shape=%s | natural scale at L%d = %.2f | coeff = %.2f (%.1f× nat-scale)",
              tuple(d_hat.shape), args.peak_layer, natural_scale, coeff, args.coeff_mult)
@@ -146,15 +122,15 @@ def main() -> int:
 
     # === Three conditions × n_test harmless test prompts ===
     log.info("generating baseline (no hook) on %d harmless test prompts...", len(harmless_test))
-    base_gen = _generate_batch(bundle, harmless_test, max_new=args.max_new_tokens)
+    base_gen = generate_batch(bundle, harmless_test, max_new_tokens=args.max_new_tokens)
 
     log.info("generating with add(d̂_train) at L%d, coeff=%.2f...", args.inject_layer, coeff)
     with add_dir(bundle.model, d_dev, coeff=coeff, layer=args.inject_layer):
-        add_real = _generate_batch(bundle, harmless_test, max_new=args.max_new_tokens)
+        add_real = generate_batch(bundle, harmless_test, max_new_tokens=args.max_new_tokens)
 
     log.info("generating with add(random) at L%d, coeff=%.2f...", args.inject_layer, coeff)
     with add_dir(bundle.model, rand_dir, coeff=coeff, layer=args.inject_layer):
-        add_rand = _generate_batch(bundle, harmless_test, max_new=args.max_new_tokens)
+        add_rand = generate_batch(bundle, harmless_test, max_new_tokens=args.max_new_tokens)
 
     cells = [
         ("baseline", base_gen),

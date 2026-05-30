@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
 import sys
 from pathlib import Path
 
@@ -48,24 +47,20 @@ import numpy as np
 from experiments._runner import (
     ARTIFACTS_FIGURES,
     RESULTS,
-    cached_activations,
-    content_hash,
+    extract_d_hat,
+    generate_batch,
     get_logger,
     get_model,
     new_run_dir,
+    stratified_split,
+    train_test_split,
     write_json,
 )
-from src.activations import cache_resid
-from src.directions import add_dir, diff_of_means, project, random_unit_vector, unit
+from src.directions import add_dir, random_unit_vector
 from src.eval import is_refusal
-from src.model import format_prompt_for_bundle, generate
+from src.model import format_prompt_for_bundle
 
 log = get_logger("phase2_step3d")
-
-
-def _generate_batch(bundle, prompts, max_new=160):
-    return [generate(bundle, p, max_new_tokens=max_new, temperature=0.0).strip()
-            for p in prompts]
 
 
 def _harmless_subset(jsonl_path: Path, seed: int = 1, n_test: int = 30, n_subset: int = 10):
@@ -73,11 +68,9 @@ def _harmless_subset(jsonl_path: Path, seed: int = 1, n_test: int = 30, n_subset
     then deterministically subset to n_subset for the sweep."""
     recs = [json.loads(l) for l in jsonl_path.open()]
     harmless_recs = [r for r in recs if r["label"] == "harmless"]
-    rng = random.Random(seed)
-    rng.shuffle(harmless_recs)
-    full_30 = [r["text"] for r in harmless_recs[:n_test]]
-    subset = full_30[:n_subset]
-    return subset
+    _, test = train_test_split(harmless_recs, seed=seed, n_test=n_test)
+    full_30 = [r["text"] for r in test]
+    return full_30[:n_subset]
 
 
 def main() -> int:
@@ -115,30 +108,19 @@ def main() -> int:
     recs = [json.loads(l) for l in pairs_path.open()]
     harm_recs = [r for r in recs if r["label"] == "harmful"]
     harmless = [r["text"] for r in recs if r["label"] == "harmless"]
-    hb = [r for r in harm_recs if r["source"] == "harmbench_cybercrime"]
-    adv = [r for r in harm_recs if r["source"] == "advbench_code"]
-    frac_hb = len(hb) / len(harm_recs)
-    n_test_hb = round(30 * frac_hb)
-    n_test_adv = 30 - n_test_hb
-    rng = random.Random(args.split_seed)
-    rng.shuffle(hb); rng.shuffle(adv)
-    harmful_train = [r["text"] for r in hb[n_test_hb:] + adv[n_test_adv:]]
+    train_recs, _ = stratified_split(
+        harm_recs, key_fn=lambda r: r["source"], seed=args.split_seed, n_test=30,
+    )
+    harmful_train = [r["text"] for r in train_recs]
     log.info("harmful train (matches step 3/3b): %d", len(harmful_train))
 
     fmt = lambda m: format_prompt_for_bundle(bundle, m)
-    extra = (f"{bundle.name}|dtype={bundle.model.cfg.dtype}|L{args.extract_layer}|"
-             f"resid_post|last_token|phase2")
-    key_ht = content_hash(harmful_train, extra=extra + "|harmful_train")
-    key_l = content_hash(harmless, extra=extra + "|harmless")
     log.info("loading cached activations at L%d ...", args.extract_layer)
-    H_train = cached_activations(
-        key_ht, lambda: cache_resid(bundle, harmful_train, layer=args.extract_layer,
-                                    show_progress=False, format_fn=fmt))
-    L_full = cached_activations(
-        key_l, lambda: cache_resid(bundle, harmless, layer=args.extract_layer,
-                                   show_progress=False, format_fn=fmt))
-    d_hat = unit(diff_of_means(H_train, L_full))
-    natural_scale = float(project(H_train, d_hat).mean())
+    d_hat, _H, _L, meta = extract_d_hat(
+        bundle, harmful_train, harmless,
+        layer=args.extract_layer, format_fn=fmt, extra_tag="phase2",
+    )
+    natural_scale = meta["natural_scale"]
     log.info("d_hat from L%d (matches step 3/3b) | natural scale = %.3f",
              args.extract_layer, natural_scale)
     d_dev = d_hat.to(bundle.device).to(bundle.model.cfg.dtype)
@@ -150,7 +132,7 @@ def main() -> int:
 
     # === Baseline (no hook) ===
     log.info("generating baseline (no hook) on %d harmless prompts...", len(harmless_subset))
-    base_gen = _generate_batch(bundle, harmless_subset, max_new=args.max_new_tokens)
+    base_gen = generate_batch(bundle, harmless_subset, max_new_tokens=args.max_new_tokens)
     base_refused = sum(is_refusal(g) for g in base_gen)
     base_rate = base_refused / len(base_gen)
     log.info("  baseline substring refusal: %d / %d = %.3f", base_refused, len(base_gen), base_rate)
@@ -170,7 +152,7 @@ def main() -> int:
             log.info("[%d/%d] %s: inject L%d, coeff=%.3f (%.1fx natural scale)",
                      cell_idx, total_cells, cell_name, L_inject, coeff, cmult)
             with add_dir(bundle.model, d_dev, coeff=coeff, layer=L_inject):
-                gen = _generate_batch(bundle, harmless_subset, max_new=args.max_new_tokens)
+                gen = generate_batch(bundle, harmless_subset, max_new_tokens=args.max_new_tokens)
             n_ref = sum(is_refusal(g) for g in gen)
             rate = n_ref / len(gen)
             mean_len = float(np.mean([len(g) for g in gen]))
@@ -251,7 +233,7 @@ def main() -> int:
                      best_cell_name)
             rand_dir = random_unit_vector(bundle.d_model, seed=0, device=bundle.device).to(bundle.model.cfg.dtype)
             with add_dir(bundle.model, rand_dir, coeff=best_meta["coeff"], layer=best_meta["inject_layer"]):
-                rand_gen = _generate_batch(bundle, harmless_subset, max_new=args.max_new_tokens)
+                rand_gen = generate_batch(bundle, harmless_subset, max_new_tokens=args.max_new_tokens)
             n_ref_rand = sum(is_refusal(g) for g in rand_gen)
             spec_control = {
                 "cell": best_cell_name,
