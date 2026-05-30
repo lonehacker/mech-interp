@@ -66,9 +66,25 @@
 </div>
 </header>
 
+<h2 id="why">Why this matters</h2>
+<p>
+Modern open-weight LLMs ship with refusal behavior trained in: ask them to write malware or instructions for a chemical attack, and they decline. This project is about how shallow that refusal is when you have weight-level access to the model.
+</p>
+<p>
+The intervention has nothing fancy in it. Run a batch of harmful prompts through the model and record the internal-state vector at one specific layer — the <em>residual stream</em>, which is just the running vector of numbers the model passes from layer to layer as it processes a token. Do the same on harmless prompts. Subtract one average from the other; that's a direction in this internal-state space. Then, during generation, project that direction out so the model can't use it. No adversarial search. No gradient access during the attack. The whole recipe is two averages, one subtraction, and one linear projection.
+</p>
+<p>
+On Gemma-2-2b-it that drops HarmBench refusal from <strong>99% to 8%</strong> at N=200 with a dual-judge cross-check, and TinyMMLU general-capability accuracy stays within noise. The model answers as fluently as before; it just stops declining in many cases where it previously did. On Qwen-2.5-3B-Instruct the same recipe works once a different criterion is used to pick which layer to read at — see the Qwen writeup for that part of the story.
+</p>
+<div class="callout">
+<p>
+<strong>The implication, blunt.</strong> Refusal mechanisms that can be removed by simple weight-level interventions — diff-of-means plus a linear projection — should not be treated as robust safety mechanisms. The RLHF/instruction-tuning refusal layer on open-weight releases is closer to a speed bump than a wall. The contribution here isn't the attack (which is from Arditi 2024) — it's the controlled cross-model account of <em>what the attack reveals</em>: refusal lives in one specific direction, the direction is hard to mistake for any of the many other directions that <em>look</em> like it from a classification standpoint, and the harder part on some models is figuring out which layer to look at.
+</p>
+</div>
+
 <h2 id="thesis">The thesis, plainly</h2>
 <p>
-In the residual stream of an instruction-tuned model, there are many linear directions along which "harmful" and "harmless" prompts pull apart. Some are vocabulary directions, some are topic directions, some are stance directions. Almost none of them are the mechanism the model uses to refuse. The mechanism is one specific direction at one specific layer-position, and the only way to find it is to <em>remove</em> a candidate direction during generation and see whether the model's behavior actually changes.
+Inside the model's residual stream, there are many directions along which "harmful" and "harmless" prompts pull apart. Some are vocabulary directions (the harmful prompts use different words). Some are topic directions. Some are stance directions (asking the model to act as attacker vs as defender). Almost none of them are the mechanism the model uses to refuse. The mechanism is one specific direction at one specific layer + token-position, and the only way to find it is to <em>remove</em> a candidate direction during generation and see whether the model's behavior actually changes.
 </p>
 <p>
 This is the gap between <strong>classification</strong> (does this direction tell harmful from harmless?) and <strong>causation</strong> (does ablating this direction make the model stop refusing?). On Gemma-2-2b-it the gap is measurable: linear-discriminant directions classify harmful vs harmless at AUC = 1.0 yet are causally inert under ablation (z ≈ 0 against a random null band), while the diff-of-means direction at L13 is causal (z ≈ +90). On Qwen-2.5-3B-Instruct the gap is wider in two specific ways:
