@@ -102,7 +102,7 @@ This is the gap between <strong>classification</strong> (does this direction tel
 </p>
 <ol style="margin: 0 0 1rem 1.5rem; line-height: 1.8;">
   <li><strong>Separability is even cheaper.</strong> Every Qwen layer — including the embedding layer L0 — classifies harmful vs harmless at AUC ≥ 0.994. There is no AUC-peak to discriminate among layers.</li>
-  <li><strong>The causal direction is even more localized.</strong> The mechanism lives at one specific (layer, token-position) cell (L22 around the end-of-instruction tokens), recoverable only by ranking candidates by causal effect on behavior — not by classification accuracy.</li>
+  <li><strong>The causal direction is even more localized.</strong> The mechanism lives in a small region of (layer, token-position) cells (L22-L23 around the end-of-instruction tokens), recoverable only by ranking candidates by causal effect on behavior — not by classification accuracy.</li>
 </ol>
 <p>
 Same diff-of-means recipe. Same matched contrastive set. The only thing that changed between "found nothing at the AUC-selected layer" and "ablating one direction turns Qwen from refusing to writing exploit code" was the <em>layer-selection criterion</em>: AUC vs intervention effect. The portable lesson is that on a model where separability is saturated, you cannot pick the layer by how well it classifies — you have to pick it by which layer's direction <em>changes behavior</em> when ablated.
@@ -133,7 +133,7 @@ The Gemma L13 <code>d̂</code> covers about 80% of fictional-framing prompts as 
 <h3>3. Model level — Qwen</h3>
 <p class="lead">Across <em>layers</em>: separability saturates everywhere, but the causal direction is at one specific cell.</p>
 <p>
-Qwen-2.5-3B-Instruct has AUC ≥ 0.994 at <em>every</em> residual-stream layer, including the embedding output L0 (= 0.9996). Picking the layer by AUC gives an arbitrary choice (L14 in our case) that turns out to be inert under <code>d̂</code> ablation (refusal 1.00 → 0.97). Picking the layer by bypass-gap — which layer's direction <em>changes refusal behavior</em> the most under ablation — points at L22 around the end-of-instruction tokens, where ablating plain diff-of-means <code>d̂</code> drops refusal cleanly while a random direction at the same cell leaves refusal at baseline. <a href="phase2.html">Phase 2.</a>
+Qwen-2.5-3B-Instruct has AUC ≥ 0.994 at <em>every</em> residual-stream layer, including the embedding output L0 (= 0.9996). Picking the layer by AUC gives an arbitrary choice (L14 in our case) that turns out to be inert under <code>d̂</code> ablation (refusal 1.00 → 0.97). Picking the layer by bypass-gap — which layer's direction <em>changes refusal behavior</em> the most under ablation — points at L22-L23 around the end-of-instruction tokens, where ablating plain diff-of-means <code>d̂</code> drops refusal cleanly (29-30 of 30 complied at N=30, dual-judge) while a random direction at the same cell leaves refusal at baseline (25-29 of 30 refused). <a href="phase2.html">Phase 2.</a>
 </p>
 </div>
 

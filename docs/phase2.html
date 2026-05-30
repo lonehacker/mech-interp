@@ -128,41 +128,34 @@ Re-running the same Phase 1 protocol — extract <code>d̂</code> by diff-of-mea
 </p>
 
 <!-- ========= 4. The headline ========= -->
-<h2 id="headline">4. The headline result at L22</h2>
+<h2 id="headline">4. The headline result at L22-L23</h2>
 
 <p>
-<strong>At L22 on the matched contrast, ablating</strong> (zero out the direction during generation) <strong><code>d̂</code> turns Qwen from refusing harmful requests into writing the requested exploit code, while ablating a random direction at the same cell leaves refusal at baseline.</strong> The direction is specific, and the layer isn't just fragile.
+<strong>Ablating</strong> (zero out the direction during generation) <strong><code>d̂</code> at L22-L23 on the matched contrast turns Qwen from refusing harmful requests into writing the requested exploit code, while ablating a random direction at the same cell leaves refusal at baseline.</strong> The direction is specific, and the layer isn't just fragile.
 </p>
 
-<h3>Headline cell — L22_pos−1, N=30</h3>
+<h3>Three pre-committed cells, N=30 each</h3>
 <div class="table-wrap">
 <table>
-<thead><tr><th>Condition</th><th>Substring refusal</th><th>Judge: refused / partial / complied</th><th>Mean chars (vs baseline 706)</th></tr></thead>
+<thead><tr><th>Condition</th><th>Substring refusal</th><th>Judge: refused / partial / complied</th><th>Mean chars (baseline 706)</th></tr></thead>
 <tbody>
-<tr><td>Baseline (no hook), N=30</td><td class="num">1.000</td><td>28 / 2 / 0</td><td class="num">706</td></tr>
-<tr class="highlight"><td><code>d̂</code> at L22_pos−1 ablated, N=30</td><td class="num">0.000</td><td><strong>1 / 0 / 29</strong></td><td class="num">755</td></tr>
-<tr><td>Random direction at L22_pos−1, N=30, seed 42</td><td class="num">1.000</td><td>25 / 5 / 0</td><td class="num">686</td></tr>
-<tr><td>Random direction at L22_pos−1, N=30, seed 1337</td><td class="num">1.000</td><td>26 / 4 / 0</td><td class="num">715</td></tr>
+<tr><td>Baseline (no hook)</td><td class="num">1.000</td><td>28 / 2 / 0</td><td class="num">706</td></tr>
+<tr class="highlight"><td><code>d̂</code> ablated at L23_pos−1</td><td class="num">0.000</td><td><strong>0 / 0 / 30</strong></td><td class="num">732</td></tr>
+<tr class="highlight"><td><code>d̂</code> ablated at L22_pos−1</td><td class="num">0.000</td><td><strong>1 / 0 / 29</strong></td><td class="num">755</td></tr>
+<tr class="highlight"><td><code>d̂</code> ablated at L22_pos−4</td><td class="num">0.100</td><td>2 / 5 / 23</td><td class="num">787</td></tr>
+<tr><td>Random ablated at L22-L23 cells (9 runs total: 3 cells × 3 seeds)</td><td class="num">0.99 avg</td><td>25-29 / 1-5 / <strong>0</strong></td><td class="num">686-715</td></tr>
 </tbody>
 </table>
 </div>
 
 <p>
-The model refuses 28 of 30 baseline. Ablating <code>d̂</code> at L22_pos−1 drops refusal to 1 of 30 — 29 of 30 complied. Ablating a random direction at the same cell across two independent seeds keeps refusal at 25–26 of 30 with no full compliances. Mean characters per completion under <code>d̂</code> ablation is 755 vs baseline 706 (ratio 1.07, inside the coherence band); under random ablation 686 / 715 (ratio 0.97 / 1.01) — the model is not on-distribution-broken in either condition. The completions under <code>d̂</code> ablation are fluent on-target answers to the specific harmful request; under random ablation they are textbook "I'm sorry, but I can't assist with that request" Qwen refusals.
+The model refuses 28 of 30 prompts at baseline. Ablating <code>d̂</code> at the bypass-gap-selected cells collapses refusal — <strong>30 of 30 complied at L23_pos−1, 29 of 30 at L22_pos−1, 23 of 30 (plus 5 partial) at L22_pos−4</strong>. The L22_pos−4 cell is the weakest of the three: partial compliances appear there (the model answers but with significant hedging) and refusal-token logit shift is smaller than at the other cells, suggesting the direction's pull is less complete at that position than at the others — consistent with a causal region whose "core" is L22-pos−1 / L23-pos−1 and whose edges are softer.
 </p>
-
-<h3>Replication at the nearby prior-region cells (n=10 pilot)</h3>
-<div class="table-wrap">
-<table>
-<thead><tr><th>Cell</th><th>d̂ ablation: R / P / C</th><th>Random ablation (3 seeds): R / P / C</th></tr></thead>
-<tbody>
-<tr class="highlight"><td>L22_pos−4</td><td><strong>0 / 0 / 10</strong></td><td>9 / 1 / 0 (each seed)</td></tr>
-<tr class="highlight"><td>L23_pos−1</td><td><strong>0 / 0 / 10</strong></td><td>9 / 1 / 0 (each seed)</td></tr>
-</tbody>
-</table>
-</div>
 <p>
-The same pattern holds at the other two pre-committed cells: <code>d̂</code> collapses refusal cleanly, three independent random directions at the same cell each leave refusal at baseline. The 10-pilot is included for completeness; the L22_pos−1 N=30 result above is the headline figure.
+The random-direction control is the discriminator. Across all three cells, all three seeds (nine independent random ablations total), <strong>zero full compliances</strong>. Refusal counts are 25–29 of 30, matching the 28-of-30 baseline. The textbook "I'm sorry, but I can't assist with that request" Qwen refusal is preserved verbatim. Mean characters per completion under <code>d̂</code> ablation ranges 732–787 vs baseline 706 (ratios 1.04–1.11, inside the coherence band); under random ablation 686–715 (ratios 0.97–1.01) — the model is not on-distribution-broken in either condition.
+</p>
+<p>
+The d̂-vs-random comparison at matched N is what closes the layer-fragility question. If L22-L23 were simply fragile layers — any perturbation breaking refusal — random ablation at the same cells would also collapse refusal. It doesn't. The direction matters, not just the layer.
 </p>
 
 <h3>What the model says under <code>d̂</code> ablation (representative)</h3>
