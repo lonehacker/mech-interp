@@ -669,19 +669,29 @@ the probe arm [+ orthogonal-readability control if chance-AUC]. All of Part 2 bu
   Confirms the ablation/probe machinery works at the right cell (the original L18 control was VOID: wrong
   cell, 83/120 still refused). WEAK corroboration the mechanism is real; does NOT resolve Llama H-dim/H-mixture
   (Llama keeps a real 77/43 split the probe reads at 0.89 — the topic-control is the only decisive test).
+- **llama_probe_topic (DECISIVE, topic-controlled, pod ~$0.5, `results/phase3_probe_llama_topic.json`):**
+  raw refusal AUC 0.90 @L31 (shuffled 0.44); **leave-one-topic-out AUC = 0.726** (per-fold [1.0,0.59,0.75,
+  0.74,0.55], 0 skipped); per-cluster refuse-rate 0.06–0.88. **VERDICT: MIXED — partial H-dim + topic
+  component, NOT clean either way.** 0.726 ≫ chance 0.50 ⇒ a REAL topic-independent linearly-decodable
+  refusal component exists (H-dim is partly real, not pure H-mixture); but 0.90→0.726 drop + wide
+  per-cluster refuse-rate ⇒ topic-correlation inflated the raw number (H-mixture component present). So the
+  earlier "H-dim" was an overstatement; the honest read is "refusal is partly a topic-independent linear
+  feature, partly topic-correlated." Human writes the final framing.
 - **arm4 qwen_probe (positive control) — VOID as run:** ablated at L18 but Qwen's best-collapse cell on
   AdvBench is L22, so it did NOT collapse (83/120 refuse; AUC 0.836). Does NOT undermine the Llama read
   (shuffled-control already validates probe specificity) but the clean collapse→unreadable CONTRAST is
   missing. TODO: re-run Qwen control at its best cell (L22 / bypass-gap-select) LOCALLY on MPS (free).
 - **Headline (human writes final verdict):** low-k diff-of-means fully collapses Qwen (0.025) but NOT
   Llama (~0.63 floor), ROBUST across position/extraction/degeneracy/specificity controls — **bank this, it's
-  solid.** On Llama, post-ablation refusal is linearly decodable (AUC 0.89 vs shuffled 0.42), but whether
-  that is residual refusal (**H-dim**) or topic-correlation (**H-mixture**) is **UNRESOLVED** — gated on the
-  topic-controlled probe (free analysis, but needs a cheap Llama acts-saving re-run) + Qwen-collapse-probe.
-  **Part-2 framing must NOT assume H-dim until discriminated** (H-dim → MoE-distribution bridge; H-mixture →
-  probe-read-topic, floor interpretation shifts).
+  solid.** On Llama, post-ablation refusal is linearly decodable (AUC 0.89-0.90 vs shuffled 0.44).
+  **RESOLVED by the topic-controlled probe: MIXED — partial H-dim + topic component.** Leave-one-topic-out
+  AUC 0.726 (≫ chance 0.50, < raw 0.90): a real topic-INDEPENDENT linear refusal component exists (so NOT
+  pure H-mixture), but the raw readability was inflated by topic-correlation (0.90→0.726 drop + per-cluster
+  refuse-rate 0.06–0.88, so NOT clean H-dim). **Part-2: refusal is neither pure-topic nor a clean single
+  low-k feature — partly distributed/linear (partial support for the MoE-distribution bridge), partly
+  topic-correlated. Do NOT frame as clean H-dim.**
 
-**Handoff one-liner (CORRECTED):** "Llama-8B holds a ~0.63 refusal floor under low-k diff-of-means (vs Qwen
+**Handoff one-liner (FINAL):** "Llama-8B holds a ~0.63 refusal floor under low-k diff-of-means (vs Qwen
 0.025 collapse), robust across 4 artifact controls — SOLID. Post-ablation refusal is linearly decodable
-(0.89); H-dim vs H-mixture (topic-confound) UNRESOLVED, gated on the topic-controlled probe. Do not assume
-H-dim in Part-2 until that runs."
+(0.90) and PARTLY topic-independent (leave-topic-out AUC 0.726 vs chance 0.50) → MIXED H-dim + topic, not
+clean either way. Part-2 builds on the floor + partial-H-dim, NOT on a clean H-dim claim."
