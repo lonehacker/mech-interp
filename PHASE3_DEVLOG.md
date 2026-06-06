@@ -624,3 +624,42 @@ probe-after-ablation, the H-dim/H-nonlinear centerpiece) → `qwen_probe` (posit
 as it finishes (a late-arm crash mustn't void early arms); (c) **natural_scale signs POSITIVE on the Llama
 extraction** — any NEGATIVE = degenerate-direction sentinel = that arm VOID regardless of ablation score
 (the way the buggy Qwen matched-set was). Report: 4 arm results + natural_scale signs + pod-terminated.
+
+### 11. PRE-REGISTERED probe-arm reading rule (set 2026-06-06 BEFORE the result, per user)
+Arms 1+2 already make the headline robust: **Llama holds a ~0.63 low-k floor (vs Qwen 0.025 collapse),
+surviving 4 artifact controls** — position (sweep), extraction-size (n=200 holds + convergence cos
+d̂₅₀→d̂₂₀₀=0.992–1.0), degeneracy (natural_scale +5.88), non-specificity (random 1.0). The probe arm only
+decides H-dim vs H-nonlinear:
+- **probe AUC HIGH** (refusal still linearly readable post-k3-ablation) → **H-dim**: "linearly present,
+  not low-k-ablatable." Clean, bank it.
+- **probe AUC ~CHANCE** → do NOT call H-nonlinear yet. Mundane alternative: the ablation may have damaged
+  the activations *generally*. **GATE (orthogonal-readability control, same post-ablation acts, different
+  target — e.g. harmful-vs-harmless CONTENT / topic):**
+  - orthogonal info READABLE (high AUC) **AND** refusal chance → genuine **H-nonlinear** (refusal went
+    where linear probes can't see, rep otherwise intact) — the strong bridge-to-Part-2 result. Bank it.
+  - orthogonal info ALSO chance → activations merely DAMAGED → probe says nothing about refusal's nature →
+    **inconclusive-due-to-damage**; needs a gentler ablation (lower k / coeff). NOT H-nonlinear.
+- **Higher bar for H-nonlinear precisely because it's the result we want.** No H-nonlinear write-up until
+  the orthogonal control rules out "merely damaged."
+
+**Handoff one-liner (post-run, for a fresh agent):** "Llama-8B holds a ~0.63 refusal floor under low-k
+diff-of-means (vs Qwen 0.025 collapse), robust across 4 artifact controls; H-dim vs H-nonlinear settled by
+the probe arm [+ orthogonal-readability control if chance-AUC]. All of Part 2 builds on this."
+
+### 12. RESULT — Goal-B Llama pod run (2026-06-06, A100-80, ~2h ≈ $3.4, pod terminated 204; RAW, human verdict)
+4 arms, 128 tok, low-k, pre-registered. Results in `results/phase3_{llama_lowk_n200,dhat_converge_llama,probe_llama,probe_qwen}.json`.
+- **arm1 llama_attack (n_extract=200, n_score=40):** floor k1=0.625 / k2=0.65 / k3=0.675 (low-k does NOT
+  break it), random 1.0, **natural_scale +5.88 (valid, not degenerate)**, best cell L18.
+- **arm2 llama_converge:** cos(d̂₅₀,d̂₂₀₀)=0.992, cos(d̂₁₀₀,d̂₂₀₀)=0.998 → direction converged → H-extract ruled out.
+- **arm3 llama_probe (the decider):** refusal AUC **0.89 @L20**, shuffled 0.42 (~chance), 77/120 still refuse
+  post-k3-ablation → **per the §11 rule, HIGH AUC ⇒ H-dim**: refusal linearly present but not low-k-ablatable.
+  (Orthogonal gate not triggered — only for chance-AUC.)
+- **arm4 qwen_probe (positive control) — VOID as run:** ablated at L18 but Qwen's best-collapse cell on
+  AdvBench is L22, so it did NOT collapse (83/120 refuse; AUC 0.836). Does NOT undermine the Llama read
+  (shuffled-control already validates probe specificity) but the clean collapse→unreadable CONTRAST is
+  missing. TODO: re-run Qwen control at its best cell (L22 / bypass-gap-select) LOCALLY on MPS (free).
+- **Headline (human writes final verdict):** low-k diff-of-means fully collapses Qwen (0.025) but NOT
+  Llama (~0.63 floor), robust across position/extraction/degeneracy/specificity controls; on Llama the
+  residual refusal stays linearly readable post-ablation (H-dim). Minor open caveat: a HIGH probe AUC could
+  in principle be topic-confounded (H-mixture); the §11 orthogonal control addresses the chance case, not
+  this — note for the human. Treadmill/Part-2 build on the H-dim + floor result.

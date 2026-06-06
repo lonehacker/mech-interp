@@ -53,8 +53,27 @@ def _labels_under_ablation(bundle, dirs, prompts, *, max_new_tokens, fmt):
     return kept, labels, gens
 
 
+def _max_auc_probe(acts, y, *, seed, shuffle_seed) -> dict:
+    """Per-layer logistic probe + shuffled-label control on [n, n_layers, d] acts; return the layer with
+    MAX held-out AUC (the most generous "readable anywhere") + the shuffled control at that layer."""
+    y = torch.as_tensor(y)
+    y_shuf = y.numpy().copy()
+    np.random.default_rng(shuffle_seed).shuffle(y_shuf)
+    y_shuf = torch.tensor(y_shuf)
+    per_layer = []
+    for lp in range(acts.shape[1]):
+        real = train_probe(acts[:, lp, :], y, seed=seed)
+        shuf = train_probe(acts[:, lp, :], y_shuf, seed=seed)
+        per_layer.append({"layer": lp, "test_auc": real.test_auc, "test_acc": real.test_acc,
+                          "shuffled_auc": shuf.test_auc})
+    best = max(per_layer, key=lambda d: (d["test_auc"] if d["test_auc"] == d["test_auc"] else -1.0))
+    return {"best_readout_layer": best["layer"], "max_test_auc": best["test_auc"],
+            "max_test_acc": best["test_acc"], "shuffled_auc_at_best": best["shuffled_auc"], "per_layer": per_layer}
+
+
 def probe_after_ablation(bundle, probe_prompts, harmless_extract, *, layer, position=-1, k=3,
-                         extract_harmful=None, fmt=None, seed=0, shuffle_seed=999, max_new_tokens=128) -> dict:
+                         extract_harmful=None, harmless_probe=None, fmt=None, seed=0, shuffle_seed=999,
+                         max_new_tokens=128) -> dict:
     """Ablate the diff-of-means k-subspace at (layer, position); then probe whether post-ablation refusal
     is still linearly readable. Returns raw numbers (no verdict).
 
@@ -82,24 +101,23 @@ def probe_after_ablation(bundle, probe_prompts, harmless_extract, *, layer, posi
                        "for the Qwen positive control near-zero refused IS the full-collapse signal.")
         return out
 
-    # post-ablation activations (all layers) under the SAME ablation
+    # post-ablation activations (all layers) on the kept harmful prompts, under the SAME ablation
     with ablate_subspace(bundle.model, dirs):
-        acts = cache_resid_all_layers(bundle, [probe_prompts[i] for i in kept], format_fn=fmt, show_progress=False)
-    y = torch.tensor(labels)
-    y_shuf = y.numpy().copy()
-    np.random.default_rng(shuffle_seed).shuffle(y_shuf)
-    y_shuf = torch.tensor(y_shuf)
+        acts_h = cache_resid_all_layers(bundle, [probe_prompts[i] for i in kept], format_fn=fmt, show_progress=False)
+    # REFUSAL probe: is refuse-vs-comply still linearly readable post-ablation?
+    out["probe"] = _max_auc_probe(acts_h, labels, seed=seed, shuffle_seed=shuffle_seed)
 
-    per_layer = []
-    for lp in range(acts.shape[1]):
-        real = train_probe(acts[:, lp, :], y, seed=seed)
-        shuf = train_probe(acts[:, lp, :], y_shuf, seed=seed)
-        per_layer.append({"layer": lp, "test_auc": real.test_auc, "test_acc": real.test_acc,
-                          "shuffled_auc": shuf.test_auc})
-    best = max(per_layer, key=lambda d: (d["test_auc"] if d["test_auc"] == d["test_auc"] else -1.0))
-    out["probe"] = {
-        "best_readout_layer": best["layer"], "max_test_auc": best["test_auc"],
-        "max_test_acc": best["test_acc"], "shuffled_auc_at_best": best["shuffled_auc"],
-        "per_layer": per_layer,
-    }
+    # ORTHOGONAL-READABILITY GATE (pre-registered, DEVLOG §11): only load-bearing when refusal AUC ~chance.
+    # Same post-ablation acts, different target — harmful-vs-harmless CONTENT. Readable here + chance refusal
+    # ⇒ H-nonlinear (rep intact, refusal specifically gone, linearly). Both chance ⇒ activations merely
+    # DAMAGED ⇒ inconclusive (needs gentler ablation), NOT H-nonlinear.
+    if harmless_probe:
+        with ablate_subspace(bundle.model, dirs):
+            acts_hl = cache_resid_all_layers(bundle, list(harmless_probe), format_fn=fmt, show_progress=False)
+        acts_orth = torch.cat([acts_h, acts_hl], dim=0)
+        y_orth = [1] * acts_h.shape[0] + [0] * acts_hl.shape[0]
+        out["orthogonal_probe"] = _max_auc_probe(acts_orth, y_orth, seed=seed, shuffle_seed=shuffle_seed)
+        out["orthogonal_probe"]["target"] = "harmful_vs_harmless_content"
+    else:
+        out["orthogonal_probe"] = None
     return out
