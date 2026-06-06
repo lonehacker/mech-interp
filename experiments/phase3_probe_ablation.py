@@ -45,7 +45,8 @@ def main() -> int:
     ap.add_argument("--n-harmless", type=int, default=60)
     ap.add_argument("--device", default=None)
     ap.add_argument("--no-processing", action="store_true")
-    ap.add_argument("--max-new-tokens", type=int, default=160)
+    ap.add_argument("--max-new-tokens", type=int, default=128,
+                    help="HELD CONSTANT (DEVLOG §9: judge S is length-entangled); 128 to match the attack run")
     ap.add_argument("--seed", type=int, default=20260606)
     ap.add_argument("--out", default="results/phase3_probe_ablation.json")
     args = ap.parse_args()

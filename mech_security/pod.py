@@ -75,6 +75,8 @@ def _parse_step_data_args(command: str) -> dict:
     return {
         "n_extract": _int("--n-extract", 40),
         "n_score": _int("--n-score", 32),
+        "n_probe": _int("--n-probe", 0),        # >0 ⇒ a phase3_probe_ablation step (different data need)
+        "n_harmless": _int("--n-harmless", 60),
         "advbench": _path("--advbench", "data/advbench_harmful_behaviors.csv"),
         "harmless": _path("--harmless", "data/alpaca_harmless.jsonl"),
         "matched": _path("--matched", None),
@@ -200,7 +202,7 @@ def wait_for_run(pod: Pod, logfile: str, heartbeat: Path, label: str, max_minute
     proc_missing = 0
     while time.time() < deadline:
         snap = pod.ssh(
-            f"echo DONE=$(grep -cE 'DONE_VERDICTS:|Traceback .most' {logfile} 2>/dev/null); "
+            f"echo DONE=$(grep -cE 'DONE_VERDICTS:|PROBE_RESULT:|CONVERGE_RESULT:|Traceback .most' {logfile} 2>/dev/null); "
             f"echo PROC=$(pgrep -fc '[e]xperiments/phase3' 2>/dev/null || echo 0); "  # bracket avoids self-match
             f"echo GPU=$(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>/dev/null | head -1); "
             f"echo LAST=$(tail -1 {logfile} 2>/dev/null)", timeout=90).stdout

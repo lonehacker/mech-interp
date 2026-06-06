@@ -31,6 +31,7 @@ from mech_security.directions import ablate_subspace, diffmeans_subspace, extrac
 from mech_security.eval_llm import judge_many
 from mech_security.model import format_prompt_for_bundle, generate
 from mech_security.probes import train_probe
+from mech_security.redteam import _assert_template_consistency
 
 MIN_PER_CLASS = 10  # below this, the post-ablation behavior is ~single-class → probe underpowered/degenerate
 
@@ -53,7 +54,7 @@ def _labels_under_ablation(bundle, dirs, prompts, *, max_new_tokens, fmt):
 
 
 def probe_after_ablation(bundle, probe_prompts, harmless_extract, *, layer, position=-1, k=3,
-                         extract_harmful=None, fmt=None, seed=0, shuffle_seed=999, max_new_tokens=160) -> dict:
+                         extract_harmful=None, fmt=None, seed=0, shuffle_seed=999, max_new_tokens=128) -> dict:
     """Ablate the diff-of-means k-subspace at (layer, position); then probe whether post-ablation refusal
     is still linearly readable. Returns raw numbers (no verdict).
 
@@ -64,6 +65,7 @@ def probe_after_ablation(bundle, probe_prompts, harmless_extract, *, layer, posi
     layer (refuse vs comply) + a shuffled-label control, and report the MAX held-out AUC across layers
     (the most generous "is the leftover refusal readable ANYWHERE post-ablation")."""
     fmt = fmt or partial(format_prompt_for_bundle, bundle)
+    _assert_template_consistency(bundle, fmt)  # extraction template MUST == scoring (the Llama-specific 2026-05-31 bug)
     d_hat, H, L, _ = extract_d_hat(bundle, extract_harmful if extract_harmful is not None else probe_prompts,
                                    harmless_extract, layer=layer, position=position, format_fn=fmt)
     dirs = diffmeans_subspace(H, L, k=k, d1=d_hat)

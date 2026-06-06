@@ -135,7 +135,8 @@ def main() -> int:
     ap.add_argument("--seeds", type=int, nargs="+", default=[42, 1337, 2024])
     ap.add_argument("--device", default=None)
     ap.add_argument("--no-processing", action="store_true")
-    ap.add_argument("--max-new-tokens", type=int, default=160)
+    ap.add_argument("--max-new-tokens", type=int, default=128,
+                    help="HELD CONSTANT across compared cells (DEVLOG §9: judge S is length-entangled); default 128")
     ap.add_argument("--replicated", action="store_true", help="set only when score split is n>=50 (holds-eligible)")
     ap.add_argument("--lda-diagnostic", action="store_true",
                     help="also run the LDA-subspace k-sweep (different k=1) for the LDA-vs-diff-of-means asymmetry note")

@@ -145,7 +145,7 @@ def _default_judge(prompts: list[str], gens: list[str]) -> tuple[float, dict]:
     return refusal_score(rep), rep
 
 
-def _score_under_hook(bundle, prompts, hook_ctx, *, max_new_tokens=160, judge_fn=None) -> dict:
+def _score_under_hook(bundle, prompts, hook_ctx, *, max_new_tokens=128, judge_fn=None) -> dict:
     """Generate greedily on `prompts` under an ablation hook (or none) and score with the judge.
 
     `judge_fn(prompts, gens) -> (S, breakdown)`; defaults to the Haiku dual-judge refusal_score.
@@ -178,7 +178,7 @@ def _assert_template_consistency(bundle, fmt, _probe="Describe how to bake a loa
 
 
 def bypass_gap_select(bundle, harmful_train, harmless_train, harmful_test, *,
-                      layers, positions, judge_fn=None, max_new_tokens=160, fmt=None) -> tuple[list[dict], dict]:
+                      layers, positions, judge_fn=None, max_new_tokens=128, fmt=None) -> tuple[list[dict], dict]:
     """Sweep (layer,pos); extract diff-of-means d̂ at each, ablate all-layer, judge. Lowest S = best.
 
     Matches Phase-2 Part-2: extraction is per-(layer,pos); ablation is all-layer (`ablate_dir`
@@ -203,7 +203,7 @@ def bypass_gap_select(bundle, harmful_train, harmless_train, harmful_test, *,
 
 def multidirection_attack(bundle, H, L, harmful_test, *, ks=(1, 2, 3), d1=None,
                           subspace_fn=diffmeans_subspace, benign_mean_chars=None,
-                          judge_fn=None, max_new_tokens=160) -> dict:
+                          judge_fn=None, max_new_tokens=128) -> dict:
     """Dimensionality (k) sweep: ablate a k-dim subspace at the best cell. Returns
     {k: {"S", "coherent", "mean_chars"}}.
 
@@ -229,7 +229,7 @@ def _lda_subspace(H, L, k, d1=None):
 
 
 def random_subspace_control(bundle, harmful_test, *, ks=(1, 2, 3), seeds=(42, 1337, 0xBEEF),
-                            judge_fn=None, max_new_tokens=160) -> dict:
+                            judge_fn=None, max_new_tokens=128) -> dict:
     """Matched-k random-SUBSPACE specificity control: for each k, ablate k random orthonormal
     directions; record the STRICTEST (min S across seeds). The multi-direction peer of `random_control`
     — shows that removing k *arbitrary* residual dims does not collapse refusal, so any collapse in the
@@ -248,7 +248,7 @@ def random_subspace_control(bundle, harmful_test, *, ks=(1, 2, 3), seeds=(42, 13
 
 
 def random_control(bundle, harmful_test, *, seeds=(42, 1337, 0xBEEF),
-                   judge_fn=None, max_new_tokens=160) -> list[dict]:
+                   judge_fn=None, max_new_tokens=128) -> list[dict]:
     """Matched-norm random-direction ablation (all-layer), one per seed — the specificity control."""
     res = []
     for s in seeds:
@@ -261,7 +261,7 @@ def random_control(bundle, harmful_test, *, seeds=(42, 1337, 0xBEEF),
 
 def run_attack(bundle, harmful_train, harmless_train, harmful_test, *,
                layers, positions, ks=(1, 2, 3), seeds=(42, 1337, 0xBEEF),
-               d_transfer=None, benign_eval=None, judge_fn=None, max_new_tokens=160,
+               d_transfer=None, benign_eval=None, judge_fn=None, max_new_tokens=128,
                fmt=None, replicated=False, lda_diagnostic=False) -> dict:
     """Full per-defended-model attack → metrics + pre-registered outcome.
 

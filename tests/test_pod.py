@@ -39,6 +39,12 @@ class TestParseStepDataArgs:
         a = _parse_step_data_args("experiments/phase3_track1.py --base X --layers 18")
         assert a["n_extract"] == 40 and a["n_score"] == 32          # argparse defaults
         assert a["harmless"] == "data/alpaca_harmless.jsonl" and a["advbench"].endswith(".csv")
+        assert a["n_probe"] == 0  # not a probe step
+
+    def test_probe_step_fields(self):
+        a = _parse_step_data_args("experiments/phase3_probe_ablation.py --layer 18 --k 3 "
+                                  "--n-extract 60 --n-probe 120 --n-harmless 60")
+        assert a["n_probe"] == 120 and a["n_harmless"] == 60 and a["n_extract"] == 60
 
     def test_matched_path_detected(self):
         a = _parse_step_data_args("experiments/phase3_track1.py --matched data/code_contrastive_matched.jsonl")

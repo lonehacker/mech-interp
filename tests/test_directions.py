@@ -17,6 +17,7 @@ import torch
 
 from mech_security.directions import (
     bypass_gap,
+    convergence_cos,
     diff_of_means,
     diffmeans_subspace,
     lda_directions,
@@ -26,6 +27,22 @@ from mech_security.directions import (
     random_unit_vector,
     unit,
 )
+
+
+class TestConvergenceCos:
+    """d̂ stability as extraction n grows — the H-extract check. cos→1 ⇒ direction converged."""
+
+    def test_self_one_and_monotone(self):
+        torch.manual_seed(0)
+        d = 16
+        ref = unit(torch.randn(d))
+        near = unit(ref + 0.05 * torch.randn(d))   # n=100 close to the n=200 reference
+        far = unit(ref + 0.6 * torch.randn(d))     # n=50 less close
+        out = convergence_cos({50: far, 100: near, 200: ref})
+        assert out["ns"] == [50, 100, 200]
+        assert abs(out["cos_to_largest"][200] - 1.0) < 1e-5            # cos with self
+        assert out["cos_to_largest"][100] > out["cos_to_largest"][50]  # converging toward ref
+        assert set(out["cos_consecutive"]) == {"50->100", "100->200"}
 
 
 def _two_clusters(n=60, d=16, seed=0, scale=0.3, sep=4.0):

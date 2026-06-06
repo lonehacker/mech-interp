@@ -64,6 +64,24 @@ def project_out_subspace(x: torch.Tensor, D: torch.Tensor) -> torch.Tensor:
     return x - (x @ D.transpose(-1, -2)) @ D
 
 
+def convergence_cos(dhats: dict[int, torch.Tensor]) -> dict:
+    """Stability of the diff-of-means direction as extraction n grows (the H-extract check).
+
+    `dhats` maps n → the UNIT d̂ extracted from n examples (nested subsets). Returns cos of each d̂_n to
+    the largest-n d̂ + consecutive-n cos. cos→1 as n grows ⇒ the direction has converged (more data does
+    NOT move it) ⇒ H-extract (suboptimal read from too few examples) is ruled out; a persistently low cos
+    ⇒ still under-extracted. Pure (unit vectors in, scalars out); unit-tested in tests/test_directions.py.
+    """
+    ns = sorted(dhats)
+    ref = dhats[ns[-1]]
+    return {
+        "ns": ns,
+        "cos_to_largest": {n: float(torch.dot(dhats[n], ref)) for n in ns},
+        "cos_consecutive": {f"{ns[i]}->{ns[i + 1]}": float(torch.dot(dhats[ns[i]], dhats[ns[i + 1]]))
+                            for i in range(len(ns) - 1)},
+    }
+
+
 def random_unit_vector(d_model: int, seed: int, device: str = "cpu") -> torch.Tensor:
     """Seeded random unit vector for specificity controls.
 

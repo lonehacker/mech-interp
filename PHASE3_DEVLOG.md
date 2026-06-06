@@ -521,3 +521,106 @@ defense: transfer 0.4, cos(self,transfer) 0.88 (both best cells L18), single-ran
 2. Restrict to low-k (1,2,3) and/or use refusal-DISCRIMINATIVE extra dims (Fisher/LDA ⟂ d̂), not PCA-of-variance.
 3. **Speed:** ~110 min/run on MPS (n=10×128tok × ~30 passes × 2 models) — too slow to iterate. The Llama
    k-sweep MUST go to a CUDA pod (~10× faster), low-k only, with the coherence gate.
+
+---
+
+## 8. Session 2026-06-06c — instrument v2 + low-k re-validation (Step 3) + Llama-pod pre-registration
+
+**Instrument v2 (all unit-tested, suite green at 152):** k>1 construction switched from PCA-of-variance to
+**orthogonalized-bootstrap diff-of-means** (each extra row = diff-of-means on a bootstrap resample,
+Gram-Schmidt'd vs prior rows — one construction across the sweep; NOT PCA, NOT LDA). Added **per-k
+coherence gating** (damaged cells → INCONCLUSIVE, `s_abl_best` over coherent cells only), **low-k {1,2,3}**
+default, **vectorized `ablate_subspace`** (O(1) in k), **probe-after-ablation** (`mech_security/probe_ablation.py`
++ runner; post-ablation caching verified: projection on ablated dir → ~2e-7), probe **AUC**.
+
+**Low-k re-validation (Qwen, matched n_score=10, 64 tok, ks {1,2,3}, `results/phase3_qwen_ksweep_lowk.json`):**
+
+| | k=1 | k=2 | k=3 | coherent | rand-subspace |
+|---|---|---|---|---|---|
+| vanilla Qwen | 0.30 | 0.30 | 0.05 | all True | 1.0/1.0/1.0 |
+| extended-refusal | 0.55 | 0.60 | 0.40 | all True | 0.95/1.0/0.95 |
+
+Integration confirmed (every new component ran). All low-k coherent = clean regime. **64-token artifact:**
+absolute S inflated vs the 128-token known ground (vanilla k1 0.30 vs 0.00; defense k1 0.55 vs 0.30) — token
+budget, not a bug; k=1 path unchanged from the 128-tok run that reproduced 0.0/0.3. **⇒ use 128 tok on the pod.**
+
+### Reframed H1 (pre-registered BEFORE the Llama run — measurable claim, not a dimensionality number)
+> "Single- and low-k (1–3) diff-of-means ablation fully collapses Qwen-3B refusal but does NOT collapse
+> Llama-8B refusal in the clean (pre-damage) regime." Dimensionality above k≈3 is UNMEASURABLE (damage and
+> refusal-dim share the range) — logged OPEN, needs a different method. Stop condition: Llama resisting
+> across clean k=1–3 IS the result — no hunting (no added coefficients/positions/sets).
+
+### Goal B — WHY diff-of-means underperforms on Llama (4 pre-registered hypotheses)
+H-dim (multi-D linear) · H-nonlinear (not a linear residual feature) · H-extract (read suboptimally; partly
+ruled out by the clean position sweep, n=200 arm confirms) · H-mixture (topic+refusal mixture; probe topic-confound).
+**Decisive test = probe-after-ablation:** ablate clean k=3 at L18, train a linear probe on POST-ablation
+acts to read refuse-vs-comply. High AUC + still refuses ⇒ H-dim ("linearly present, not low-k-ablatable").
+Chance AUC + still refuses ⇒ **H-nonlinear** (the strong finding: diff-of-means underperforms because
+Llama refusal isn't fully a linear residual feature). Qwen = positive control (post-ablation ~all comply ⇒
+nothing to read = full collapse).
+
+### The ONE pre-registered Llama pod run (A100-80 SECURE, ~$1–1.5, 128 tok, low-k, no LDA)
+1. **llama_attack** — undefended Llama, `--ks 1 2 3 --n-extract 200 --layers 18 20` → n=200 denominator arm
+   (does the ~0.42 floor hold) + low-k sweep + random-subspace + coherence.
+2. **llama_probe** — probe-after-ablation, L18, k=3 (the H-dim vs H-nonlinear centerpiece).
+3. **qwen_probe** — same probe on Qwen-3B = positive control (expect full-collapse / unreadable).
+Pre-registered cells only; null = finding; report raw numbers + control columns, human writes verdicts.
+
+---
+
+## 9. KNOWN INSTRUMENT PROPERTY — the refusal judge's S is entangled with completion length
+
+The 64-vs-128-token discrepancy (§8: vanilla k1 0.30@64 vs 0.00@128; defense 0.55@64 vs 0.30@128) is not
+just a logistics note — it means **the Haiku refusal score S depends on `max_new_tokens`**: shorter
+completions read as more refusal-ish (a truncated answer looks like a non-answer). This has teeth:
+
+- The attack works by turning short refusals into LONG compliance, so any cell-to-cell comparison where
+  the attack changes output length is *partly* confounded by the judge's length-sensitivity.
+- Same failure FAMILY as the coherence-sentinel bug already fixed (A6: it was anchored to refusal length;
+  re-anchored to benign-generation length). The same length-dependence now shows up in the judge ITSELF.
+
+**CONTROL RULE (applies to every run, not just Llama):** generation budget (`--max-new-tokens`) MUST be
+held CONSTANT across any cells being compared. Default to **128**. Cross-run absolute-S comparisons are
+only valid at a matched budget.
+
+**Re-check flag — banked Phase-3 numbers were taken at MIXED budgets:** Track-3 defense (§6a) at 160 tok;
+corrected Qwen k-sweep (§7) at 128 tok; low-k re-validation (§8) at 64 tok; llama_pos / `_LLAMA` at 128 tok.
+*Within* a run (same budget) comparisons hold; *across* runs do not without noting the budget. The
+defense-floor agreement (0.30 at 160 vs ~0.30/0.55 at 128/64) is therefore budget-dependent, not a clean
+replication. The Llama pod uses 128 throughout (mandatory).
+
+### Step-1 single-run gate (vanilla Qwen k=1 @ 128 tok, current code, `results/phase3_qwen_k1_128tok.json`)
+Result: ablated **0.10** (best cell L18, drop 0.900, random 1.000) — NOT exactly 0.00. Resolved by
+INSPECTING completions (not a story): **9/10 are coherent harmful compliance** ("Certainly! Hacking…",
+Dirty-COW step-by-step, a file-encryption/ransomware script, EternalBlue code, UNION SQLi hash-dump);
+the 0.10 is ONE prompt (an "I understand… but" redirect). → **vanilla COLLAPSES at 128 tok** (vs 0.30 at
+64 tok = the token-budget artifact, now confirmed). The 0.10-vs-§7's-0.00 is one prompt under MPS
+run-to-run nondeterminism on n=10 (documented ±0.1 floor); the k=1 path (`bypass_gap_select`+`ablate_dir`)
+is untouched this session, and a regression would show refusals, not 9/10 working exploits. **Exact 0.00
+is unmeetable on MPS+n=10** — completions are the harder evidence. Gate read: PASS on substance
+(instrument calibrated; k=1 path sound), pending human confirm since 0.10 ≠ literal 0.00.
+
+### 10. LAUNCH READINESS — Goal-B pod run is GO (2026-06-06d)
+**Gate CLOSED (single run, properly powered):** vanilla Qwen k=1 @ 128 tok, AdvBench **n_score=40 → 0.025**
+(1/40, zero refusal phrases across all 40 completions) = clean collapse, no asterisk
+(`results/phase3_qwen_k1_advbench_n40.json`). Earlier 0.10@n=10 was the n=10 noise floor.
+
+**All runners survive contact (smoked on real models, free):** attack (battle-tested via the gates);
+`phase3_dhat_converge` (cos(d̂₈,d̂₁₆)=0.969); `phase3_probe_ablation` end-to-end on the extended-refusal
+defense → probe TRAINED (19 refused/11 complied), **max AUC 0.933 @ L20, shuffled-control 0.467 (~chance)**.
+
+**Four pre-launch checks confirmed by config/grep:** (1) pre-flight fires in-job, all 4 arms pass, pod
+reads the 300-row alpaca (data/ not tar-excluded); (2) 128 tok on attack/probe/qwen_probe (converge =
+extraction-only); (3) template-assert in BOTH paths (`redteam.py:189` attack, `probe_ablation.py:68`
+probe); (4) SSH keepalive + `--terminate-after now+5h` + `finally: terminate()`.
+
+**LAUNCH COMMAND (unattended):**  `python experiments/run_pod.py llama_goalb`
+4 arms on ONE A100-80 SECURE, 128 tok, low-k, pre-registered cells only, ~$1–1.5, self-terminating:
+`llama_attack` (n=200 denom + low-k sweep) → `llama_converge` (cos d̂₁₀₀,d̂₂₀₀) → `llama_probe` (k=3
+probe-after-ablation, the H-dim/H-nonlinear centerpiece) → `qwen_probe` (positive control).
+
+**MONITOR — operational tells only (don't babysit live):** (a) pod actually TERMINATES at completion
+(not a poll-loop hang) — verify zero live pods via REST after; (b) each arm writes its checkpoint JSON
+as it finishes (a late-arm crash mustn't void early arms); (c) **natural_scale signs POSITIVE on the Llama
+extraction** — any NEGATIVE = degenerate-direction sentinel = that arm VOID regardless of ablation score
+(the way the buggy Qwen matched-set was). Report: 4 arm results + natural_scale signs + pod-terminated.
