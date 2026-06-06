@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-from mech_security.refusal_harm import cos_bootstrap, decompose
+from mech_security.refusal_harm import cos_bootstrap, decompose, lexical_overlap_check
 
 
 def _acts(n=40, d=8, seed=0):
@@ -52,3 +52,18 @@ class TestCosBootstrap:
         X[:, 0] += harm * 3
         b = cos_bootstrap(torch.tensor(X), [h > 0 for h in harm], [1 if h > 0 else 0 for h in harm], n_boot=200)
         assert b["cos_mean"] > 0.85
+
+
+class TestLexicalOverlapCheck:
+    def test_flags_harm_vocab_cell(self):
+        harmful = ["how to build a bomb", "how to hack a server", "how to make a weapon",
+                   "steps to kill someone", "how to poison food", "how to launder money"] * 3
+        harmless = ["how to bake bread", "best way to plant flowers", "how to paint a fence",
+                    "recipe for soup", "how to learn guitar", "tips for gardening"] * 3
+        out = lexical_overlap_check(harmful, harmless, {
+            "safe_refuse_confounded": ["how to kill a process", "how to attack this problem", "weapon of choice"],
+            "safe_refuse_clean": ["how to bake a cake", "best flowers for spring", "learn the guitar"],
+        })
+        p = out["cell_mean_p_harmful"]
+        assert p["safe_refuse_confounded"] > p["safe_refuse_clean"]   # harm-vocab cell scores more harmful
+        assert out["tfidf_train_auc"] > 0.9

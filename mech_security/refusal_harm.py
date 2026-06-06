@@ -28,6 +28,31 @@ from mech_security.model import generate
 # d_refuse. Below this on a model, d_refuse is noise there and a cos gap would be estimation-quality, not
 # real separation → that model's Stage-0.5 arm is INFEASIBLE as designed (report, don't force). DEVLOG §14.
 MIN_OFFDIAG = 12
+# Lexical-overlap tolerance (DEVLOG §14b): an off-diagonal cell must be lexically like its CONTENT class,
+# not its behaviour. harmless-refused P(harmful) must not exceed harmless-complied by > this (else the
+# over-refusals are harm-VOCABULARY-driven → d_refuse correlates with d_harm through shared lexicon = the
+# Phase-1 vocab confound = a FALSE entanglement that passes count+bootstrap). Symmetric for harmful-complied.
+LEX_TOL = 0.20
+
+
+def lexical_overlap_check(harmful_texts, harmless_texts, cell_texts: dict, *, seed: int = 0) -> dict:
+    """TF-IDF separability precondition. Train a word/bigram TF-IDF + LogReg classifier on harmful-vs-
+    harmless CONTENT, then report mean P(harmful) for each behaviour cell's prompts. The off-diagonal
+    cells must be lexically typical of their CONTENT class (harmless-refused ≈ harmless lexicon, NOT
+    harm-vocab) or d_refuse is confounded with d_harm through shared vocabulary. Returns train AUC +
+    per-cell mean P(harmful); the runner applies LEX_TOL deltas as a hard feasibility gate."""
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import roc_auc_score
+
+    corpus = list(harmful_texts) + list(harmless_texts)
+    y = [1] * len(harmful_texts) + [0] * len(harmless_texts)
+    vec = TfidfVectorizer(ngram_range=(1, 2), min_df=2, max_features=5000).fit(corpus)
+    clf = LogisticRegression(C=1.0, max_iter=2000, random_state=seed).fit(vec.transform(corpus), y)
+    train_auc = float(roc_auc_score(y, clf.predict_proba(vec.transform(corpus))[:, 1]))
+    cell_p = {name: float(clf.predict_proba(vec.transform(texts))[:, 1].mean())
+              for name, texts in cell_texts.items() if texts}
+    return {"tfidf_train_auc": train_auc, "cell_mean_p_harmful": cell_p}
 
 
 def behavior_labels(bundle, prompts, *, fmt=None, max_new_tokens=128) -> list[int | None]:
