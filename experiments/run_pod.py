@@ -63,6 +63,16 @@ JOBS: dict[str, dict] = {
                                "--base Qwen/Qwen2.5-3B-Instruct --out results/phase3_probe_qwen.json"),
         ],
     },
+    # The decisive H-dim vs H-mixture re-run: probe-after-ablation on Llama WITH the topic-controlled probe
+    # (the original goalb probe arm predated it). One cheap arm (~$0.5). Llama is pod-only (won't fit MPS).
+    "llama_probe_topic": {
+        "gpu_specs": A100_80,
+        "disk_gb": 150,
+        "steps": [
+            ("llama_probe_topic", f"{_PROBE} --ckpt NousResearch/Meta-Llama-3-8B-Instruct "
+                                  "--base meta-llama/Meta-Llama-3-8B-Instruct --out results/phase3_probe_llama_topic.json"),
+        ],
+    },
 }
 
 
