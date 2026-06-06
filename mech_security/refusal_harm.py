@@ -17,11 +17,17 @@ on the pod. Reports raw numbers; human writes the verdict.
 """
 from __future__ import annotations
 
+import numpy as np
 import torch
 
 from mech_security.directions import diff_of_means, unit
 from mech_security.eval_llm import judge_many
 from mech_security.model import generate
+
+# Pre-registered minimum count per OFF-DIAGONAL cell (harmless-refused, harmful-complied) for a stable
+# d_refuse. Below this on a model, d_refuse is noise there and a cos gap would be estimation-quality, not
+# real separation → that model's Stage-0.5 arm is INFEASIBLE as designed (report, don't force). DEVLOG §14.
+MIN_OFFDIAG = 12
 
 
 def behavior_labels(bundle, prompts, *, fmt=None, max_new_tokens=128) -> list[int | None]:
@@ -58,3 +64,31 @@ def decompose(acts: torch.Tensor, content_is_harmful: list[bool], refused: list[
         "n_refused": int(ref_mask.sum()), "n_complied": int(comp_mask.sum()),
         "d_harm": d_harm, "d_refuse": d_refuse,
     }
+
+
+def cos_bootstrap(acts: torch.Tensor, content_is_harmful, refused, *, n_boot: int = 500, seed: int = 0) -> dict:
+    """Bootstrap null band for cos(d_harm, d_refuse): resample WITH REPLACEMENT within each label group,
+    recompute both directions + their cosine, n_boot times. Returns mean/std/2.5-97.5 percentiles — so a
+    Qwen-vs-Llama cos gap is judged against estimation noise, not read off a single draw (DEVLOG §14 #3)."""
+    A = acts.detach().cpu().float().numpy() if hasattr(acts, "detach") else np.asarray(acts, dtype=float)
+    ch = np.asarray(content_is_harmful, dtype=bool)
+    rf = np.array([1 if r == 1 else (0 if r == 0 else -1) for r in refused])
+    grp = {"h": np.where(ch)[0], "s": np.where(~ch)[0], "r": np.where(rf == 1)[0], "c": np.where(rf == 0)[0]}
+    if min(len(v) for v in grp.values()) < 2:
+        raise ValueError(f"a label group is single/empty: { {k: len(v) for k, v in grp.items()} }")
+    g = np.random.default_rng(seed)
+
+    def _mean(idx):
+        return A[g.choice(idx, len(idx), replace=True)].mean(0)
+
+    coss = []
+    for _ in range(n_boot):
+        dh = _mean(grp["h"]) - _mean(grp["s"])
+        dr = _mean(grp["r"]) - _mean(grp["c"])
+        dh /= np.linalg.norm(dh) + 1e-9
+        dr /= np.linalg.norm(dr) + 1e-9
+        coss.append(float(dh @ dr))
+    coss = np.array(coss)
+    return {"cos_mean": float(coss.mean()), "cos_std": float(coss.std()),
+            "cos_p2.5": float(np.percentile(coss, 2.5)), "cos_p97.5": float(np.percentile(coss, 97.5)),
+            "n_boot": int(n_boot)}

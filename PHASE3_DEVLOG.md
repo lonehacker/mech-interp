@@ -695,3 +695,35 @@ the probe arm [+ orthogonal-readability control if chance-AUC]. All of Part 2 bu
 0.025 collapse), robust across 4 artifact controls — SOLID. Post-ablation refusal is linearly decodable
 (0.90) and PARTLY topic-independent (leave-topic-out AUC 0.726 vs chance 0.50) → MIXED H-dim + topic, not
 clean either way. Part-2 builds on the floor + partial-H-dim, NOT on a clean H-dim claim."
+
+### 14. Stage 0.5 PRE-REGISTRATION — refusal-vs-harmfulness decomposition (set before running; the SET is the experiment)
+d̂ ≡ d_harm by construction, so the live questions are cos(d̂, d_refuse) per model + ablate-clean-d_refuse
+on Llama. The decomposition math (`refusal_harm.decompose`) is unit-tested + the easy part; validity rests
+on the OFF-DIAGONAL SET. Three pre-registered controls — **none of the reads below are valid until all 3 pass:**
+
+1. **harmful-complied cell — population method (the confound trap):** populate ONLY from NATURAL
+   under-refusals — genuinely-harmful (AdvBench) prompts the model complied on with NO jailbreak and NO
+   ablation. This is non-circular (no attack → no "did the attack work" confound) and same-severity (full
+   AdvBench, not milder/benign-relabeled → not a harm-severity proxy). EXCLUDED: jailbroken/ablated
+   completions (circular + unsafe); "harmful-labeled but mild" prompts (severity-contaminates d_refuse).
+   **Residual caveat to report:** natural under-refusals may be severity-SELECTED (model misses milder
+   harmful) — flag, don't hide. harmless-refused cell ← over-refusal set (benign-but-scary).
+2. **per-model 2×2 counts + MIN threshold:** over-refusal/under-refusal are model-specific → a shared set
+   can give a healthy off-diagonal on one model, near-empty on the other → a FAKE cosine gap that's really
+   an estimation-quality gap. **Report the 2×2 cell counts PER MODEL; require ≥ MIN per off-diagonal cell
+   (pre-set MIN_OFFDIAG=12) for a stable d_refuse.** If harmful-complied < MIN → experiment INFEASIBLE as
+   designed on that model — report that, do NOT force it.
+3. **bootstrap null band on the cosine (gap):** cosines between diff-of-means dirs from different-sized/
+   composition cells have baseline variance. Resample cells → recompute cos → distribution; the Qwen-vs-Llama
+   gap is a finding ONLY if outside that null band (the Phase-1.5 "distribution not single draw" lesson).
+
+**Qwen validates the DATA, not just the code (gates the Llama spend):** Qwen cos(d̂,d_refuse) HIGH (expected
+from its clean collapse) ⇒ code AND off-diagonal set are real enough ⇒ Llama spend justified. Qwen cos LOW ⇒
+RED FLAG the set is too noisy to estimate d_refuse (most likely the data, not a real Qwen separation) — do
+NOT spend on Llama until understood.
+
+**Reads (valid only after 1–3 pass):** clean d_refuse ablation collapses Llama ≪0.63 ⇒ floor was EXTRACTION
+ARTIFACT (revises §12 loudly); still floors ⇒ real/mechanistic; cos HIGH-Qwen/LOW-Llama (gap outside null) ⇒
+refusal & harm SEPARATED in Llama, diff-of-means merges+ablates neither (publishable model-difference).
+**Gates RDO** (ablating old d̂ under RDO measures the wrong thing if the floor is an extraction artifact).
+Report per-model 2×2 counts + Qwen cos + bootstrap band BEFORE proposing the Llama spend.

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-from mech_security.refusal_harm import decompose
+from mech_security.refusal_harm import cos_bootstrap, decompose
 
 
 def _acts(n=40, d=8, seed=0):
@@ -34,3 +34,21 @@ class TestDecompose:
         X, _ = _acts(seed=2)
         with pytest.raises(ValueError):
             decompose(torch.tensor(X), [i % 2 == 0 for i in range(len(X))], [1] * len(X))  # all refused
+
+
+class TestCosBootstrap:
+    def test_band_brackets_separated_near_zero(self):
+        X, g = _acts(n=80, seed=3)
+        harm, ref = g.standard_normal(len(X)), g.standard_normal(len(X))
+        X[:, 0] += harm * 3
+        X[:, 1] += ref * 3
+        b = cos_bootstrap(torch.tensor(X), [h > 0 for h in harm], [1 if r > 0 else 0 for r in ref],
+                          n_boot=200, seed=0)
+        assert b["cos_p2.5"] < 0.4 and b["cos_p97.5"] > b["cos_p2.5"]   # band near 0, has width
+
+    def test_band_high_when_aligned(self):
+        X, g = _acts(n=80, seed=4)
+        harm = g.standard_normal(len(X))
+        X[:, 0] += harm * 3
+        b = cos_bootstrap(torch.tensor(X), [h > 0 for h in harm], [1 if h > 0 else 0 for h in harm], n_boot=200)
+        assert b["cos_mean"] > 0.85
