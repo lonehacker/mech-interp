@@ -18,11 +18,103 @@ import torch
 from mech_security.directions import (
     bypass_gap,
     diff_of_means,
+    diffmeans_subspace,
     lda_directions,
     project,
+    project_out_subspace,
+    random_orthonormal,
     random_unit_vector,
     unit,
 )
+
+
+def _two_clusters(n=60, d=16, seed=0, scale=0.3, sep=4.0):
+    torch.manual_seed(seed)
+    h = torch.randn(n, d) * scale
+    h[:, 0] += sep
+    l = torch.randn(n, d) * scale
+    l[:, 0] -= sep
+    return h, l
+
+
+class TestDiffmeansSubspace:
+    """The corrected k-sweep instrument: row 0 is EXACTLY diff-of-means (so k=1 == single-direction
+    headline), rows 1..k-1 are orthogonal additions. Distinct from lda_directions, whose k=1 differs."""
+
+    def test_k1_is_exactly_diff_of_means(self):
+        h, l = _two_clusters()
+        dirs = diffmeans_subspace(h, l, k=1)
+        assert dirs.shape == (1, h.shape[1])
+        assert torch.allclose(dirs[0], unit(diff_of_means(h, l)).float(), atol=1e-6)
+
+    def test_d1_override_pins_row0_exactly(self):
+        # passing the cached headline d̂ must reproduce it byte-for-byte as row 0 (the run_attack guarantee)
+        h, l = _two_clusters()
+        d_hat = unit(diff_of_means(h, l)).float()
+        dirs = diffmeans_subspace(h, l, k=4, d1=d_hat)
+        assert torch.allclose(dirs[0], d_hat, atol=1e-6)
+
+    def test_orthonormal_rows_for_k_gt_1(self):
+        h, l = _two_clusters(d=20, seed=1)
+        dirs = diffmeans_subspace(h, l, k=5)
+        assert dirs.shape == (5, 20)
+        gram = dirs @ dirs.T
+        assert torch.allclose(gram, torch.eye(5), atol=1e-4)  # unit rows, mutually orthogonal
+
+    def test_extra_dims_orthogonal_to_diff_of_means(self):
+        h, l = _two_clusters(d=20, seed=2)
+        dirs = diffmeans_subspace(h, l, k=4)
+        for i in range(1, 4):
+            assert abs(float(torch.dot(dirs[0], dirs[i]))) < 1e-4
+
+    def test_seeded_deterministic(self):
+        # bootstrap extra rows are seeded → reproducible (no Date.now/Random surprises across runs)
+        h, l = _two_clusters(d=20, seed=3)
+        assert torch.allclose(diffmeans_subspace(h, l, k=3, seed=7), diffmeans_subspace(h, l, k=3, seed=7))
+
+    def test_extra_rows_are_diffmeans_not_pca(self):
+        # the extra rows come from bootstrap diff-of-means, so different seeds give different extra rows
+        # (a PCA/SVD construction would be seed-invariant). Row 0 (the headline) stays identical.
+        h, l = _two_clusters(d=20, seed=4)
+        a, b = diffmeans_subspace(h, l, k=3, seed=1), diffmeans_subspace(h, l, k=3, seed=2)
+        assert torch.allclose(a[0], b[0], atol=1e-6)            # headline identical
+        assert not torch.allclose(a[1], b[1])                   # bootstrap extra rows differ by seed
+
+
+class TestProjectOutSubspace:
+    """The vectorized subspace ablation must equal the old per-direction loop for orthonormal dirs
+    (that equivalence is why the O(1)-in-k matmul is a safe speedup, not a behavior change)."""
+
+    def test_matches_sequential_loop_and_removes_span(self):
+        torch.manual_seed(0)
+        D = random_orthonormal(16, k=3, seed=1)
+        x = torch.randn(5, 16)
+        out = project_out_subspace(x, D)
+        assert torch.allclose(out @ D.T, torch.zeros(5, 3), atol=1e-5)   # no component left in span(D)
+        seq = x.clone()                                                  # the old sequential ablation
+        for i in range(3):
+            d = D[i]
+            seq = seq - (seq * d).sum(-1, keepdim=True) * d
+        assert torch.allclose(out, seq, atol=1e-5)
+
+    def test_leaves_orthogonal_component_untouched(self):
+        D = random_orthonormal(8, k=2, seed=2)
+        x = torch.randn(8)
+        x = x - (x @ D.T) @ D                       # x already ⟂ span(D)
+        assert torch.allclose(project_out_subspace(x, D), x, atol=1e-5)
+
+
+class TestRandomOrthonormal:
+    """Matched-k random-subspace control: k orthonormal vectors, seeded + reproducible."""
+
+    def test_shape_and_orthonormal(self):
+        dirs = random_orthonormal(64, k=3, seed=0)
+        assert dirs.shape == (3, 64)
+        assert torch.allclose(dirs @ dirs.T, torch.eye(3), atol=1e-5)
+
+    def test_reproducible_and_seed_sensitive(self):
+        assert torch.allclose(random_orthonormal(32, 2, seed=7), random_orthonormal(32, 2, seed=7))
+        assert not torch.allclose(random_orthonormal(32, 2, seed=7), random_orthonormal(32, 2, seed=8))
 
 
 class TestDiffOfMeans:

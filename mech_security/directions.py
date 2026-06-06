@@ -57,6 +57,13 @@ def project(acts: torch.Tensor, d_hat: torch.Tensor) -> torch.Tensor:
     return acts @ d_hat
 
 
+def project_out_subspace(x: torch.Tensor, D: torch.Tensor) -> torch.Tensor:
+    """Remove the component of `x` in span(D): x − (x Dᵀ) D. `D` is [k, d] and MUST be orthonormal —
+    then this is the exact orthogonal-complement projection, equal to sequentially projecting out each
+    row but in ONE matmul (O(1) in k, not a Python loop). Inputs [..., d] and [k, d]; output [..., d]."""
+    return x - (x @ D.transpose(-1, -2)) @ D
+
+
 def random_unit_vector(d_model: int, seed: int, device: str = "cpu") -> torch.Tensor:
     """Seeded random unit vector for specificity controls.
 
@@ -66,6 +73,19 @@ def random_unit_vector(d_model: int, seed: int, device: str = "cpu") -> torch.Te
     g = torch.Generator(device=device).manual_seed(seed)
     v = torch.randn(d_model, generator=g, device=device)
     return v / v.norm()
+
+
+def random_orthonormal(d_model: int, k: int, seed: int, device: str = "cpu") -> torch.Tensor:
+    """k random ORTHONORMAL vectors [k, d_model] (seeded) — the matched-k random-SUBSPACE control.
+
+    Peer to `random_unit_vector` generalized to k directions: ablating k random orthogonal directions
+    tests whether removing *any* k residual dims dents refusal, isolating the effect of the refusal
+    subspace specifically. QR of a seeded Gaussian gives orthonormal columns; we return them as rows.
+    """
+    g = torch.Generator(device=device).manual_seed(seed)
+    A = torch.randn(d_model, k, generator=g, device=device)
+    Q, _ = torch.linalg.qr(A)            # [d_model, k] with orthonormal columns
+    return Q.T.contiguous()              # [k, d_model], each row a unit vector ⟂ the others
 
 
 def _is_residual_hook(name: str) -> bool:
@@ -188,28 +208,72 @@ def lda_directions(
     return torch.tensor(np.array(directions), dtype=torch.float32)
 
 
+def diffmeans_subspace(
+    H: torch.Tensor,
+    L: torch.Tensor,
+    k: int = 1,
+    d1: torch.Tensor | None = None,
+    seed: int = 0,
+) -> torch.Tensor:
+    """Diff-of-means-ANCHORED orthonormal k-subspace — ONE construction method across the whole sweep.
+
+    Row 0 = the full-set diff-of-means headline d̂ (so k=1 reproduces the single-direction result exactly).
+    Rows 1..k-1 = diff-of-means on BOOTSTRAP RESAMPLES of (H, L), each Gram-Schmidt-orthogonalized against
+    the kept rows. Every row is therefore itself a diff-of-means direction — deliberately NOT PCA (which
+    would be variance, not refusal) and NOT LDA/Fisher (a *different* instrument: Track-3 showed the
+    extended-refusal defense resists LDA but falls to diff-of-means, so an LDA sweep must be run + labelled
+    SEPARATELY, never folded in here).
+
+    Interpretation of the extra rows: if refusal is ~1-D, the resampled d̂'s are near-parallel to d̂ and
+    their orthogonal residuals are sampling noise (≈ random dirs → ablating them adds nothing over the
+    matched-k random-subspace control). If refusal is genuinely multi-D, the resamples carry a CONSISTENT
+    off-d̂ component and the extra rows capture it. (Above k≈3 this is unmeasurable — capability-damage and
+    refusal-dimensionality share the same k-range; see PHASE3_DEVLOG. Use low k only.)
+
+    Seeded (bootstrap) → deterministic. Returns an orthonormal [k', d] tensor. Pass `d1` to pin row 0 to
+    the cached headline d̂ — guaranteeing k=1 == the single-direction vector.
+    """
+    d1 = unit(d1 if d1 is not None else diff_of_means(H, L)).float()
+    dirs = [d1]
+    if k <= 1:
+        return torch.stack(dirs)
+    Hf, Lf = H.float(), L.float()
+    g = torch.Generator().manual_seed(seed)
+    attempts = 0
+    while len(dirs) < k and attempts < 50 * k:           # backstop against a degenerate (rank-deficient) set
+        attempts += 1
+        ih = torch.randint(len(Hf), (len(Hf),), generator=g)   # bootstrap resample (with replacement)
+        il = torch.randint(len(Lf), (len(Lf),), generator=g)
+        d = diff_of_means(Hf[ih], Lf[il])
+        for dp in dirs:                                  # Gram-Schmidt against kept rows
+            d = d - (d @ dp) * dp
+        n = d.norm()
+        if n.item() < 1e-6:
+            continue
+        dirs.append(d / n)
+    return torch.stack(dirs)
+
+
 @contextmanager
 def ablate_subspace(
     model: HookedTransformer,
     dirs: torch.Tensor,
 ) -> Iterator[None]:
-    """Multi-direction Arditi ablation: project EACH direction out of every
-    residual hook for the `with` block.
+    """Multi-direction Arditi ablation: project the SPAN of `dirs` out of every residual hook.
 
-    `dirs` is [k, d_model], each row a unit vector. Peer to `ablate_dir` —
-    same hook surfaces (_FAITHFUL_HOOK_SUFFIXES at every layer), generalized
-    to k directions instead of one.
+    `dirs` is [k, d_model] and MUST be ORTHONORMAL (rows unit + mutually orthogonal) — every caller
+    builds them that way (diffmeans_subspace / lda_directions / random_orthonormal). Under that
+    assumption the orthogonal-complement projection is a single matmul per hook (`project_out_subspace`):
+    x ← x − (x Dᵀ) D, which is O(1) in k. The earlier per-direction Python loop made high-k generation
+    pathologically slow (k× the per-token hook overhead at every layer). Peer to `ablate_dir`.
     """
-    dirs_dev = [
-        _validate_unit_and_prep(dirs[i], model)
-        for i in range(dirs.shape[0])
-    ]
+    D = torch.stack([_validate_unit_and_prep(dirs[i], model) for i in range(dirs.shape[0])])  # [k, d]
+    gram = D @ D.T  # the projection identity holds only for orthonormal dirs — fail loud if not
+    if not torch.allclose(gram, torch.eye(D.shape[0], device=D.device, dtype=D.dtype), atol=1e-2):
+        raise ValueError("ablate_subspace requires ORTHONORMAL dirs (rows unit + mutually orthogonal)")
 
     def hook_fn(x: torch.Tensor, hook: HookPoint) -> torch.Tensor:
-        for d in dirs_dev:
-            coeff = (x * d).sum(dim=-1, keepdim=True)
-            x = x - coeff * d
-        return x
+        return project_out_subspace(x, D)
 
     hooks = [
         (f"blocks.{L}.{suffix}", hook_fn)

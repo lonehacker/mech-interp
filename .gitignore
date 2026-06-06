@@ -18,3 +18,7 @@ artifacts/cache/
 
 # OS detritus
 .DS_Store
+
+# IDE / personal tool config
+.idea/
+.claude/

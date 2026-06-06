@@ -17,6 +17,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
 
@@ -28,6 +29,7 @@ class ProbeResult:
     n_train: int
     n_test: int
     seed: int
+    test_auc: float = float("nan")  # held-out ROC-AUC — the headline for probe-after-ablation (chance=0.5)
 
 
 def _to_numpy(t: torch.Tensor) -> np.ndarray:
@@ -75,6 +77,12 @@ def train_probe(
     )
     clf.fit(X_tr, y_tr)
 
+    # ROC-AUC on the held-out split (undefined if the test split is single-class → nan)
+    try:
+        test_auc = float(roc_auc_score(y_te, clf.predict_proba(X_te)[:, 1]))
+    except ValueError:
+        test_auc = float("nan")
+
     return ProbeResult(
         layer=-1,  # caller sets the real layer index
         train_acc=float(clf.score(X_tr, y_tr)),
@@ -82,6 +90,7 @@ def train_probe(
         n_train=int(X_tr.shape[0]),
         n_test=int(X_te.shape[0]),
         seed=seed,
+        test_auc=test_auc,
     )
 
 

@@ -1,0 +1,7 @@
+START Sun 31 May 2026 19:45:29 UTC
+[19:45] preflight: local run_attack gpt2 smoke (A6/A7)
+[19:45] preflight passed
+[19:45] attempt 1: created NVIDIA A100-SXM4-80GB/SECURE pod=stadmn1kqsq912
+[19:46] pod ready root@154.54.102.47:12683 (attempt 1)
+[19:47] bootstrap done
+[19:47] Arm A: Alpaca-Qwen (general harmless, AdvBench harmful) n_extract=100

@@ -1,0 +1,13 @@
+START Sun 31 May 2026 16:50:37 UTC
+[16:50] preflight: local run_attack gpt2 smoke (A6/A7)
+[16:50] preflight passed
+[16:51] attempt 1: created NVIDIA A100-SXM4-80GB/SECURE pod=ypf6oa8xnbhc0g; waiting boot
+[16:52] pod ready root@154.54.102.47:15376 (attempt 1)
+[16:53] bootstrap done
+[16:53] Stage A: tiny vanilla-Llama smoke (warms cache)
+[16:57] Stage A smoke passed
+[16:57] Stage B (step 2): strengthened denominator — vanilla Llama (Alpaca harmless, n_extract=100, L8-20)
+[18:20] [finish_qwen] salvage: secure Llama result + run Qwen Stage C on ypf6oa8xnbhc0g (keepalive ssh)
+[18:20] [finish_qwen] Stage C: capability check — vanilla Qwen2.5-3B (same strengthened attack)
+[19:07] Stage B (Llama denominator) done
+[19:07] Stage C (step 3): capability check — vanilla Qwen2.5-3B (same strengthened attack)

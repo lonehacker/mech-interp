@@ -12,11 +12,12 @@ Returns are CPU fp32 tensors — Phase 1 caches are small (n × 2304 floats
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from functools import partial
 
 import torch
 from tqdm.auto import tqdm
 
-from .model import ModelBundle, format_prompt, tokenize_prompt
+from .model import ModelBundle, format_prompt_for_bundle, tokenize_prompt
 
 
 def _resid_hook_name(layer: int) -> str:
@@ -44,7 +45,10 @@ def _cache_at_hooks(
     Returns a list of length n_prompts, each entry [n_hooks, d_model] on CPU fp32.
     """
     if format_fn is None:
-        format_fn = format_prompt
+        # Model-correct chat template (Gemma→Gemma, Qwen→ChatML, Llama-3→Llama-3), resolved from the
+        # bundle — the SAME path scoring (model.generate→format_prompt_for_bundle) uses. NEVER hardcode
+        # Gemma here: that silently mis-templated every non-Gemma extraction (2026-05-31 Phase-3 bug).
+        format_fn = partial(format_prompt_for_bundle, bundle)
     iterator = tqdm(list(prompts), desc=desc) if show_progress else prompts
     out: list[torch.Tensor] = []
     for raw in iterator:

@@ -22,6 +22,25 @@ from mech_security.probes import (
 )
 
 
+class TestProbeAUC:
+    """test_auc is the headline for probe-after-ablation: high ⇒ leftover refusal linearly readable
+    (H-dim), ~chance ⇒ not readable (H-nonlinear). It must track separability."""
+
+    def test_separable_high_auc(self):
+        torch.manual_seed(0)
+        n, d = 120, 16
+        X = torch.randn(n, d)
+        y = torch.arange(n) % 2
+        X[y == 1, 0] += 4.0  # plant a clean separating axis
+        assert train_probe(X, y, seed=0).test_auc > 0.95
+
+    def test_random_labels_chance_auc(self):
+        torch.manual_seed(1)
+        X = torch.randn(120, 16)
+        y = torch.arange(120) % 2  # labels uncorrelated with X
+        assert 0.3 < train_probe(X, y, seed=0).test_auc < 0.7  # ~chance
+
+
 @pytest.fixture
 def planted_separable():
     """[n=100, n_layers=4, d_model=16] with layer 2 linearly separable.
