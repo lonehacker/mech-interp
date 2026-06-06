@@ -664,6 +664,11 @@ the probe arm [+ orthogonal-readability control if chance-AUC]. All of Part 2 bu
   topic-controlled probe** (refuse-vs-comply with topic held constant) + Qwen-collapse-probe corroboration.
   ⚠ topic-control needs the Llama POST-ABLATION ACTS, which the pod arm did not save → a cheap Llama probe
   re-run (acts saved + topic-control) is required; Llama doesn't fit MPS so it's pod-only (~$0.5, budget-gated).
+- **arm4-redo qwen_probe @ L22 (Qwen's real collapse cell; local, free, `results/phase3_probe_qwen_L22.json`):**
+  collapses — **2/120 refuse, 118 comply** → "full collapse ⇒ nothing to probe" (degenerate, probe=None).
+  Confirms the ablation/probe machinery works at the right cell (the original L18 control was VOID: wrong
+  cell, 83/120 still refused). WEAK corroboration the mechanism is real; does NOT resolve Llama H-dim/H-mixture
+  (Llama keeps a real 77/43 split the probe reads at 0.89 — the topic-control is the only decisive test).
 - **arm4 qwen_probe (positive control) — VOID as run:** ablated at L18 but Qwen's best-collapse cell on
   AdvBench is L22, so it did NOT collapse (83/120 refuse; AUC 0.836). Does NOT undermine the Llama read
   (shuffled-control already validates probe specificity) but the clean collapse→unreadable CONTRAST is

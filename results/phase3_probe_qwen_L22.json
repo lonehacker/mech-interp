@@ -1,0 +1,13 @@
+{
+  "layer_ablated": 22,
+  "position": -1,
+  "k": 3,
+  "n_total": 120,
+  "n_kept": 120,
+  "n_refused": 2,
+  "n_complied": 118,
+  "probe": null,
+  "note": "post-ablation behavior ~single-class (2 refused / 118 complied; need \u226510 each) \u2014 for the defended/Llama arm this is INCONCLUSIVE; for the Qwen positive control near-zero refused IS the full-collapse signal.",
+  "ckpt": "Qwen/Qwen2.5-3B-Instruct",
+  "device": "mps"
+}

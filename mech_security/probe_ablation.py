@@ -71,6 +71,43 @@ def _max_auc_probe(acts, y, *, seed, shuffle_seed) -> dict:
             "max_test_acc": best["test_acc"], "shuffled_auc_at_best": best["shuffled_auc"], "per_layer": per_layer}
 
 
+def topic_controlled_probe(acts, labels, topic_embeddings, *, n_topics=5, seed=0) -> dict:
+    """Discriminate H-dim from H-mixture: is refuse-vs-comply decodable with TOPIC HELD CONSTANT?
+
+    Cluster prompts into `n_topics` (KMeans on `topic_embeddings`), then LEAVE-ONE-TOPIC-OUT CV: train the
+    refuse/comply probe on prompts OUTSIDE cluster c, test on c. Mean held-out AUC across folds —
+      stays HIGH  ⇒ refusal decodable independent of topic ⇒ **H-dim**;
+      ~chance     ⇒ the readout was topic-correlation ⇒ **H-mixture** (probe read topic, not residual refusal).
+    Folds whose train/test cluster is single-class are skipped (logged) — heavy skipping itself signals
+    topic↔refusal confounding. `acts`/`topic_embeddings`: [n, d] (probe layer); `labels`: [n] 0/1. Pure(ish)
+    — sklearn in, scalars out; unit-tested in tests/test_probe_ablation.py."""
+    from sklearn.cluster import KMeans
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import roc_auc_score
+
+    X = acts.detach().cpu().float().numpy() if hasattr(acts, "detach") else np.asarray(acts, dtype=float)
+    emb = topic_embeddings.detach().cpu().float().numpy() if hasattr(topic_embeddings, "detach") else np.asarray(topic_embeddings, dtype=float)
+    y = np.asarray(labels).astype(int)
+    n_topics = min(n_topics, len(y))
+    clusters = KMeans(n_clusters=n_topics, random_state=seed, n_init=10).fit_predict(emb)
+    fold_aucs, skipped, per_cluster = [], [], []
+    for c in sorted(set(clusters.tolist())):
+        te, tr = clusters == c, clusters != c
+        per_cluster.append({"cluster": int(c), "n": int(te.sum()), "refuse_rate": float(y[te].mean())})
+        if len(set(y[te].tolist())) < 2 or len(set(y[tr].tolist())) < 2:  # single-class fold → undecidable
+            skipped.append(int(c))
+            continue
+        clf = LogisticRegression(C=1.0, max_iter=2000, random_state=seed).fit(X[tr], y[tr])
+        fold_aucs.append(float(roc_auc_score(y[te], clf.predict_proba(X[te])[:, 1])))
+    return {
+        "n_topics": int(n_topics),
+        "leave_topic_out_auc_mean": float(np.mean(fold_aucs)) if fold_aucs else float("nan"),
+        "per_fold_auc": fold_aucs,
+        "skipped_single_class_folds": skipped,
+        "per_cluster_refuse_rate": per_cluster,  # spread across clusters = topic↔refusal confounding
+    }
+
+
 def probe_after_ablation(bundle, probe_prompts, harmless_extract, *, layer, position=-1, k=3,
                          extract_harmful=None, harmless_probe=None, fmt=None, seed=0, shuffle_seed=999,
                          max_new_tokens=128) -> dict:
@@ -106,6 +143,11 @@ def probe_after_ablation(bundle, probe_prompts, harmless_extract, *, layer, posi
         acts_h = cache_resid_all_layers(bundle, [probe_prompts[i] for i in kept], format_fn=fmt, show_progress=False)
     # REFUSAL probe: is refuse-vs-comply still linearly readable post-ablation?
     out["probe"] = _max_auc_probe(acts_h, labels, seed=seed, shuffle_seed=shuffle_seed)
+    # H-dim vs H-mixture DISCRIMINATOR (DEVLOG §11): does refuse/comply decode with TOPIC held constant?
+    # Leave-topic-out CV at the best readout layer. High ⇒ H-dim; ~chance/undecidable ⇒ H-mixture (topic).
+    bl = out["probe"]["best_readout_layer"]
+    out["topic_controlled"] = topic_controlled_probe(acts_h[:, bl, :], labels, acts_h[:, bl, :],
+                                                     n_topics=max(2, min(5, len(labels) // 6)), seed=seed)
 
     # ORTHOGONAL-READABILITY GATE (pre-registered, DEVLOG §11): only load-bearing when refusal AUC ~chance.
     # Same post-ablation acts, different target — harmful-vs-harmless CONTENT. Readable here + chance refusal
