@@ -630,8 +630,14 @@ Arms 1+2 already make the headline robust: **Llama holds a ~0.63 low-k floor (vs
 surviving 4 artifact controls** — position (sweep), extraction-size (n=200 holds + convergence cos
 d̂₅₀→d̂₂₀₀=0.992–1.0), degeneracy (natural_scale +5.88), non-specificity (random 1.0). The probe arm only
 decides H-dim vs H-nonlinear:
-- **probe AUC HIGH** (refusal still linearly readable post-k3-ablation) → **H-dim**: "linearly present,
-  not low-k-ablatable." Clean, bank it.
+- **probe AUC HIGH** (refusal still linearly readable post-k3-ablation) → **H-dim OR H-mixture, NOT settled.**
+  High AUC has its OWN unguarded confound: the probe may read TOPIC/harmfulness/vocab that merely
+  *correlates* with refusal (the Phase-1 vocab-confound, 4th hypothesis), not residual refusal. The
+  shuffled control (chance) only rules out noise-inflation, NOT topic-correlation. **GATE (topic-controlled
+  probe, free/local-or-cheap):** separate refused-vs-complied with TOPIC HELD CONSTANT (within-topic, or a
+  topic+vocab-matched set, or leave-topic-out CV). AUC stays high topic-controlled → genuine **H-dim**;
+  AUC collapses to chance → the 0.89 was topic → **H-mixture** (probe read topic, not residual refusal).
+  Corroborate with the Qwen-collapse-probe (post-L22-collapse AUC → chance ⇒ probe tracks real refusal).
 - **probe AUC ~CHANCE** → do NOT call H-nonlinear yet. Mundane alternative: the ablation may have damaged
   the activations *generally*. **GATE (orthogonal-readability control, same post-ablation acts, different
   target — e.g. harmful-vs-harmless CONTENT / topic):**
@@ -652,14 +658,25 @@ the probe arm [+ orthogonal-readability control if chance-AUC]. All of Part 2 bu
   break it), random 1.0, **natural_scale +5.88 (valid, not degenerate)**, best cell L18.
 - **arm2 llama_converge:** cos(d̂₅₀,d̂₂₀₀)=0.992, cos(d̂₁₀₀,d̂₂₀₀)=0.998 → direction converged → H-extract ruled out.
 - **arm3 llama_probe (the decider):** refusal AUC **0.89 @L20**, shuffled 0.42 (~chance), 77/120 still refuse
-  post-k3-ablation → **per the §11 rule, HIGH AUC ⇒ H-dim**: refusal linearly present but not low-k-ablatable.
-  (Orthogonal gate not triggered — only for chance-AUC.)
+  post-k3-ablation. **VERDICT: H-dim OR H-mixture — UNRESOLVED (do NOT bank H-dim).** High AUC is consistent
+  with residual refusal (H-dim) OR the probe reading topic/harmfulness that correlates with refusal
+  (H-mixture, Phase-1 vocab-confound). Shuffled control rules out noise, NOT topic. **Gated on the
+  topic-controlled probe** (refuse-vs-comply with topic held constant) + Qwen-collapse-probe corroboration.
+  ⚠ topic-control needs the Llama POST-ABLATION ACTS, which the pod arm did not save → a cheap Llama probe
+  re-run (acts saved + topic-control) is required; Llama doesn't fit MPS so it's pod-only (~$0.5, budget-gated).
 - **arm4 qwen_probe (positive control) — VOID as run:** ablated at L18 but Qwen's best-collapse cell on
   AdvBench is L22, so it did NOT collapse (83/120 refuse; AUC 0.836). Does NOT undermine the Llama read
   (shuffled-control already validates probe specificity) but the clean collapse→unreadable CONTRAST is
   missing. TODO: re-run Qwen control at its best cell (L22 / bypass-gap-select) LOCALLY on MPS (free).
 - **Headline (human writes final verdict):** low-k diff-of-means fully collapses Qwen (0.025) but NOT
-  Llama (~0.63 floor), robust across position/extraction/degeneracy/specificity controls; on Llama the
-  residual refusal stays linearly readable post-ablation (H-dim). Minor open caveat: a HIGH probe AUC could
-  in principle be topic-confounded (H-mixture); the §11 orthogonal control addresses the chance case, not
-  this — note for the human. Treadmill/Part-2 build on the H-dim + floor result.
+  Llama (~0.63 floor), ROBUST across position/extraction/degeneracy/specificity controls — **bank this, it's
+  solid.** On Llama, post-ablation refusal is linearly decodable (AUC 0.89 vs shuffled 0.42), but whether
+  that is residual refusal (**H-dim**) or topic-correlation (**H-mixture**) is **UNRESOLVED** — gated on the
+  topic-controlled probe (free analysis, but needs a cheap Llama acts-saving re-run) + Qwen-collapse-probe.
+  **Part-2 framing must NOT assume H-dim until discriminated** (H-dim → MoE-distribution bridge; H-mixture →
+  probe-read-topic, floor interpretation shifts).
+
+**Handoff one-liner (CORRECTED):** "Llama-8B holds a ~0.63 refusal floor under low-k diff-of-means (vs Qwen
+0.025 collapse), robust across 4 artifact controls — SOLID. Post-ablation refusal is linearly decodable
+(0.89); H-dim vs H-mixture (topic-confound) UNRESOLVED, gated on the topic-controlled probe. Do not assume
+H-dim in Part-2 until that runs."
