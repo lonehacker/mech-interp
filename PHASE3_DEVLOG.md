@@ -727,3 +727,25 @@ ARTIFACT (revises §12 loudly); still floors ⇒ real/mechanistic; cos HIGH-Qwen
 refusal & harm SEPARATED in Llama, diff-of-means merges+ablates neither (publishable model-difference).
 **Gates RDO** (ablating old d̂ under RDO measures the wrong thing if the floor is an extraction artifact).
 Report per-model 2×2 counts + Qwen cos + bootstrap band BEFORE proposing the Llama spend.
+
+### 15. Stage-0.5 RESULT — INFEASIBLE as designed (Qwen gate, `results/phase3_refusal_harm_qwen.json`, 2026-06-07)
+Qwen L22, n=430 (120 advbench + 60 alpaca + 250 XSTest-safe). 2×2: harm_refuse 118, **harm_comply 2**,
+safe_refuse 45, safe_comply 265.
+- **Vocab-confound fix VALIDATED ✓** (the part that mattered most): the TF-IDF lexical gate PASSED —
+  XSTest over-refusals are lexically harmless-like (safe_refuse P(harmful)=0.48 ≈ safe_comply 0.44,
+  safe_delta=0.039 ≪ LEX_TOL 0.20; tfidf_auc 0.997). XSTest + the lexical gate solved the Phase-1
+  vocab confound the hand-authored scary-word set had reintroduced. harmless-refused cell clean, 45≥MIN.
+- **INFEASIBLE — harmful-complied = 2/120 < MIN_OFFDIAG=12.** Qwen refuses ~all harmful, so NATURAL
+  under-refusals (the only non-circular, non-contaminating source) can't populate harmful-complied → no
+  clean d_refuse → cosine NOT computed (gate worked). This is the exact pre-registered "if there's no
+  clean way to populate it, the experiment can't run" outcome — surfaced FREE before any spend.
+- **Llama spend SKIPPED:** Llama's harmful baseline is also ~1.0 (refuses ~all) → its natural
+  harmful-complied cell would be just as empty → the ~$0.5 Llama run would re-discover the same
+  infeasibility. The free Qwen gate did its job (saved the spend). [A bigger harmful set could
+  accumulate ≥12 natural under-refusals, but they'd be a severity-/idiosyncrasy-selected subset → a
+  noisy, unrepresentative d_refuse; not pursued without a cleaner method.]
+- **Net:** "is the ~0.63 Llama floor an EXTRACTION ARTIFACT (d̂=harm not refusal)?" is NOT cleanly
+  testable via behavioural d_refuse extraction on well-aligned models. §12 verdict stands (floor real;
+  post-ablation refusal MIXED partial-H-dim+topic); the extraction-artifact question is logged OPEN /
+  needs a different method (e.g. a model that naturally complies on harmful, or a non-behavioural
+  refusal-direction definition), NOT falsely resolved. Gates RDO unchanged.

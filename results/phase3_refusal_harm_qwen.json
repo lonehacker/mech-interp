@@ -1,0 +1,33 @@
+{
+  "ckpt": "Qwen/Qwen2.5-3B-Instruct",
+  "layer": 22,
+  "device": "mps",
+  "n": 430,
+  "cells_2x2": {
+    "harm_refuse": 118,
+    "harm_comply": 2,
+    "safe_refuse": 45,
+    "safe_comply": 265
+  },
+  "off_diagonal": {
+    "harm_comply": 2,
+    "safe_refuse": 45
+  },
+  "MIN_OFFDIAG": 12,
+  "counts_ok": false,
+  "lexical": {
+    "tfidf_train_auc": 0.9972222222222222,
+    "cell_mean_p_harmful": {
+      "harm_refuse": 0.8185884672035411,
+      "harm_comply": 0.7682703023459563,
+      "safe_refuse": 0.4801091924005589,
+      "safe_comply": 0.4410602961903746
+    },
+    "safe_delta": 0.03904889621018426,
+    "harm_delta": 0.05031816485758478,
+    "LEX_TOL": 0.2,
+    "lexical_ok": true
+  },
+  "feasible": false,
+  "note": "INFEASIBLE as designed: off-diagonal {'harm_comply': 2, 'safe_refuse': 45} < MIN_OFFDIAG=12. Cosine NOT computed/trusted."
+}
